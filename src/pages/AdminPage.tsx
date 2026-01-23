@@ -281,29 +281,29 @@ const AdminPage = () => {
                 </div>
 
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-                    <div className="overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0">
-                        <TabsList className="bg-muted/50 p-1 rounded-2xl h-auto flex md:grid md:grid-cols-6 gap-2 min-w-[700px]">
-                            <TabsTrigger value="dashboard" className="rounded-xl py-3 border border-transparent data-[state=active]:border-border data-[state=active]:bg-card flex-1">
+                    <div className="pb-2 -mx-4 px-4 md:mx-0 md:px-0">
+                        <TabsList className="bg-muted/50 p-1 rounded-2xl h-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 w-full">
+                            <TabsTrigger value="dashboard" className="rounded-xl py-3 border border-transparent data-[state=active]:border-border data-[state=active]:bg-card text-xs md:text-sm">
                                 <LayoutDashboard className="h-4 w-4 mr-2" />
                                 Dash
                             </TabsTrigger>
-                            <TabsTrigger value="products" className="rounded-xl py-3 border border-transparent data-[state=active]:border-border data-[state=active]:bg-card flex-1">
+                            <TabsTrigger value="products" className="rounded-xl py-3 border border-transparent data-[state=active]:border-border data-[state=active]:bg-card text-xs md:text-sm">
                                 <Package className="h-4 w-4 mr-2" />
                                 Catálogo
                             </TabsTrigger>
-                            <TabsTrigger value="users" className="rounded-xl py-3 border border-transparent data-[state=active]:border-border data-[state=active]:bg-card flex-1">
+                            <TabsTrigger value="users" className="rounded-xl py-3 border border-transparent data-[state=active]:border-border data-[state=active]:bg-card text-xs md:text-sm">
                                 <Users className="h-4 w-4 mr-2" />
                                 Contas
                             </TabsTrigger>
-                            <TabsTrigger value="antifraud" className="rounded-xl py-3 border border-transparent data-[state=active]:border-border data-[state=active]:bg-card flex-1">
+                            <TabsTrigger value="antifraud" className="rounded-xl py-3 border border-transparent data-[state=active]:border-border data-[state=active]:bg-card text-xs md:text-sm">
                                 <ShieldAlert className="h-4 w-4 mr-2" />
                                 Risco
                             </TabsTrigger>
-                            <TabsTrigger value="comms" className="rounded-xl py-3 border border-transparent data-[state=active]:border-border data-[state=active]:bg-card flex-1">
+                            <TabsTrigger value="comms" className="rounded-xl py-3 border border-transparent data-[state=active]:border-border data-[state=active]:bg-card text-xs md:text-sm">
                                 <Bell className="h-4 w-4 mr-2" />
                                 Comms
                             </TabsTrigger>
-                            <TabsTrigger value="settings" className="rounded-xl py-3 border border-transparent data-[state=active]:border-border data-[state=active]:bg-card flex-1">
+                            <TabsTrigger value="settings" className="rounded-xl py-3 border border-transparent data-[state=active]:border-border data-[state=active]:bg-card text-xs md:text-sm">
                                 <Settings className="h-4 w-4 mr-2" />
                                 Config
                             </TabsTrigger>

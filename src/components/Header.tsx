@@ -46,6 +46,12 @@ export const Header = () => {
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  const handleMobileNav = (path: string) => {
+    navigate(path);
+    setSheetOpen(false);
+  };
 
   const handleCartClick = () => {
     navigate('/cart');
@@ -86,7 +92,7 @@ export const Header = () => {
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center gap-4">
             {/* Mobile menu - NOW POWERED BY SHEET */}
-            <Sheet>
+            <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="md:hidden text-card-foreground hover:text-secondary -ml-2" aria-label="Abrir menu lateral">
                   <Menu className="h-5 w-5" />
@@ -105,19 +111,19 @@ export const Header = () => {
                       <p className="text-[10px] font-black uppercase text-secondary tracking-widest px-2">A Minha Conta</p>
                       {user ? (
                         <div className="space-y-1">
-                          <button onClick={() => navigate('/profile')} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors">
+                          <button onClick={() => handleMobileNav('/profile')} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors">
                             <User className="h-5 w-5 text-secondary" />
                             <div className="text-left">
                               <p className="text-sm font-bold">{user.user_metadata?.full_name || 'Meu Perfil'}</p>
                               <p className="text-[10px] text-muted-foreground truncate max-w-[180px]">{user.email}</p>
                             </div>
                           </button>
-                          <button onClick={() => navigate('/orders')} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors">
+                          <button onClick={() => handleMobileNav('/orders')} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors">
                             <Package className="h-5 w-5 text-secondary" />
                             <span className="text-sm font-bold">Meus Pedidos</span>
                           </button>
                           {profile?.is_admin && (
-                            <button onClick={() => navigate('/admin')} className="w-full flex items-center gap-3 p-4 rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all border-2 border-primary">
+                            <button onClick={() => handleMobileNav('/admin')} className="w-full flex items-center gap-3 p-4 rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all border-2 border-primary">
                               <ShieldCheck className="h-6 w-6" />
                               <div className="text-left">
                                 <span className="text-sm font-black block">Painel Admin</span>
@@ -127,7 +133,7 @@ export const Header = () => {
                           )}
                         </div>
                       ) : (
-                        <Button onClick={() => navigate('/login')} className="w-full bg-secondary text-secondary-foreground font-black h-12 rounded-xl">
+                        <Button onClick={() => handleMobileNav('/login')} className="w-full bg-secondary text-secondary-foreground font-black h-12 rounded-xl">
                           Entrar / Registar
                         </Button>
                       )}
@@ -137,14 +143,14 @@ export const Header = () => {
                     <div className="space-y-3">
                       <p className="text-[10px] font-black uppercase text-secondary tracking-widest px-2">Explorar</p>
                       <div className="space-y-1">
-                        <button onClick={() => navigate('/search?filter=flash')} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors text-secondary">
+                        <button onClick={() => handleMobileNav('/search?filter=flash')} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors text-secondary">
                           <Clock className="h-5 w-5" />
                           <span className="text-sm font-black">Ofertas do Dia</span>
                         </button>
                         {MARKETPLACE_CATEGORIES.map((cat) => (
                           <button
                             key={cat.id}
-                            onClick={() => navigate(`/category/${cat.id}`)}
+                            onClick={() => handleMobileNav(`/category/${cat.id}`)}
                             className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors"
                           >
                             <cat.icon className="h-5 w-5 text-muted-foreground" />
@@ -153,11 +159,27 @@ export const Header = () => {
                         ))}
                       </div>
                     </div>
+
+                    {/* Institucional */}
+                    <div className="space-y-3">
+                      <p className="text-[10px] font-black uppercase text-secondary tracking-widest px-2">Institucional</p>
+                      <div className="space-y-1">
+                        <button onClick={() => handleMobileNav('/about')} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors">
+                          <span className="text-sm font-medium">Sobre Nós</span>
+                        </button>
+                        <button onClick={() => handleMobileNav('/how-it-works')} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors">
+                          <span className="text-sm font-medium">Como Funciona</span>
+                        </button>
+                        <button onClick={() => handleMobileNav('/terms')} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors">
+                          <span className="text-sm font-medium">Termos & Privacidade</span>
+                        </button>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Bottom of Drawer */}
                   <div className="p-4 border-t border-border bg-muted/10">
-                    <button onClick={() => navigate('/help')} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors text-muted-foreground">
+                    <button onClick={() => handleMobileNav('/help')} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors text-muted-foreground">
                       <ShieldCheck className="h-5 w-5" />
                       <span className="text-sm font-medium">Ajuda & Segurança</span>
                     </button>
@@ -422,7 +444,7 @@ export const Header = () => {
             </ul>
           </div>
         </nav>
-      </header>
+      </header >
 
       <AuthRequiredModal
         open={authModalOpen}

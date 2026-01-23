@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 
 export const Footer = () => {
   return (
-    <footer className="bg-card border-t border-border mt-8">
+    <footer className="bg-card border-t border-border mt-8 hidden md:block">
       {/* Features */}
       <div className="border-b border-border">
         <div className="container mx-auto px-4 py-6">
