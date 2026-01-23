@@ -35,7 +35,10 @@ const CareersPage = lazy(() => import("./pages/CareersPage"));
 const WishlistPage = lazy(() => import("./pages/WishlistPage"));
 const TrackOrderPage = lazy(() => import("./pages/TrackOrderPage"));
 const HowItWorksPage = lazy(() => import("./pages/HowItWorksPage"));
+const ChatPage = lazy(() => import("./pages/ChatPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+
+// ... (in Routes)
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -48,47 +51,52 @@ const queryClient = new QueryClient({
 
 import { CartProvider } from "@/contexts/CartContext";
 
+import { ChatProvider } from "@/contexts/ChatContext";
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <CartProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Layout>
-              <Suspense fallback={<LoadingScreen />}>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/login" element={<LoginPage />} />
-                  <Route path="/register" element={<RegisterPage />} />
-                  <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                  <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-                  <Route path="/product/:id" element={<ProductDetailsPage />} />
-                  <Route path="/publish" element={<ProtectedRoute><PublishPage /></ProtectedRoute>} />
-                  <Route path="/seller" element={<ProtectedRoute><SellerPage /></ProtectedRoute>} />
-                  <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminPage /></ProtectedRoute>} />
-                  <Route path="/category/:id" element={<CategoryPage />} />
-                  <Route path="/search" element={<SearchPage />} />
-                  <Route path="/how-it-works" element={<HowItWorksPage />} />
-                  <Route path="/cart" element={<CartPage />} />
-                  <Route path="/order-success" element={<ProtectedRoute><OrderSuccessPage /></ProtectedRoute>} />
-                  <Route path="/help" element={<HelpCenterPage />} />
-                  <Route path="/orders" element={<ProtectedRoute><OrdersPage /></ProtectedRoute>} />
-                  <Route path="/returns" element={<ProtectedRoute><ReturnsPage /></ProtectedRoute>} />
-                  <Route path="/contact" element={<ContactPage />} />
-                  <Route path="/about" element={<AboutPage />} />
-                  <Route path="/terms" element={<TermsPage />} />
-                  <Route path="/careers" element={<CareersPage />} />
-                  <Route path="/wishlist" element={<ProtectedRoute><WishlistPage /></ProtectedRoute>} />
-                  <Route path="/track" element={<ProtectedRoute><TrackOrderPage /></ProtectedRoute>} />
-                  <Route path="/track/:id" element={<ProtectedRoute><TrackOrderPage /></ProtectedRoute>} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </Suspense>
-            </Layout>
-          </BrowserRouter>
-        </TooltipProvider>
+        <ChatProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Layout>
+                <Suspense fallback={<LoadingScreen />}>
+                  <Routes>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/register" element={<RegisterPage />} />
+                    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                    <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+                    <Route path="/product/:id" element={<ProductDetailsPage />} />
+                    <Route path="/publish" element={<ProtectedRoute><PublishPage /></ProtectedRoute>} />
+                    <Route path="/seller" element={<ProtectedRoute><SellerPage /></ProtectedRoute>} />
+                    <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminPage /></ProtectedRoute>} />
+                    <Route path="/category/:id" element={<CategoryPage />} />
+                    <Route path="/search" element={<SearchPage />} />
+                    <Route path="/how-it-works" element={<HowItWorksPage />} />
+                    <Route path="/cart" element={<CartPage />} />
+                    <Route path="/order-success" element={<ProtectedRoute><OrderSuccessPage /></ProtectedRoute>} />
+                    <Route path="/help" element={<HelpCenterPage />} />
+                    <Route path="/orders" element={<ProtectedRoute><OrdersPage /></ProtectedRoute>} />
+                    <Route path="/returns" element={<ProtectedRoute><ReturnsPage /></ProtectedRoute>} />
+                    <Route path="/contact" element={<ContactPage />} />
+                    <Route path="/about" element={<AboutPage />} />
+                    <Route path="/terms" element={<TermsPage />} />
+                    <Route path="/careers" element={<CareersPage />} />
+                    <Route path="/wishlist" element={<ProtectedRoute><WishlistPage /></ProtectedRoute>} />
+                    <Route path="/chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
+                    <Route path="/track" element={<ProtectedRoute><TrackOrderPage /></ProtectedRoute>} />
+                    <Route path="/track/:id" element={<ProtectedRoute><TrackOrderPage /></ProtectedRoute>} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </Suspense>
+              </Layout>
+            </BrowserRouter>
+          </TooltipProvider>
+        </ChatProvider>
       </CartProvider>
     </AuthProvider>
   </QueryClientProvider>

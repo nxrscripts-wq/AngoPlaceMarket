@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCart } from '@/contexts/CartContext';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,7 @@ import { WishlistItem, Product } from '@/types';
 const WishlistPage = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
+    const { addToCart } = useCart();
     const [items, setItems] = useState<WishlistItem[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -67,25 +69,9 @@ const WishlistPage = () => {
         }
     };
 
-    const addToCart = async (product: Product) => {
-        if (!user) {
-            toast.error('Faça login para adicionar ao carrinho');
-            return;
-        }
-
-        try {
-            const { error } = await supabase.from('cart_items').insert({
-                user_id: user.id,
-                product_id: product.id,
-                quantity: 1
-            });
-
-            if (error) throw error;
-            toast.success('Adicionado ao carrinho!');
-            navigate('/cart');
-        } catch (error) {
-            toast.error('Erro ao adicionar ao carrinho');
-        }
+    const handleAddToCart = async (product: Product) => {
+        await addToCart(product);
+        navigate('/cart');
     };
 
     return (
@@ -148,7 +134,7 @@ const WishlistPage = () => {
                                         <div className="flex gap-3">
                                             <Button
                                                 className="flex-1 bg-secondary text-secondary-foreground font-bold h-12 rounded-xl group-hover:shadow-lg group-hover:shadow-secondary/20 transition-all"
-                                                onClick={() => addToCart(item.products)}
+                                                onClick={() => handleAddToCart(item.products)}
                                             >
                                                 <ShoppingCart className="h-4 w-4 mr-2" />
                                                 🛒 Carrinho

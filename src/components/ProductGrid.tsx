@@ -3,6 +3,7 @@ import { ProductCard } from "./ProductCard";
 import { supabase, type Product } from "@/lib/supabase";
 import { Loader2, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
+import { ProductCardSkeleton } from "@/components/skeletons/ProductCardSkeleton";
 
 interface ProductGridProps {
   title: string;
@@ -38,8 +39,6 @@ export const ProductGrid = ({
         if (filterType === "new_arrivals") {
           query = query.order('created_at', { ascending: false });
         } else if (filterType === "super_discounts") {
-          // Since we can't easily do a calculated field filter in basic RPC/Supabase client without raw SQL,
-          // we'll fetch products with old_price and sort by the discount in JS, or just filter for having an old_price.
           query = query.not('old_price', 'is', null).order('price', { ascending: true });
         } else {
           // best_sellers (default)
@@ -80,9 +79,9 @@ export const ProductGrid = ({
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-black text-card-foreground">{title}</h2>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-6">
             {[...Array(limit)].map((_, i) => (
-              <div key={i} className="aspect-[3/4] bg-muted animate-pulse rounded-xl" />
+              <ProductCardSkeleton key={i} />
             ))}
           </div>
         </div>
@@ -91,7 +90,7 @@ export const ProductGrid = ({
   }
 
   if (error || products.length === 0) {
-    if (filterType !== "best_sellers") return null; // Don't show empty specialized sections
+    if (filterType !== "best_sellers") return null;
     return (
       <section className={`py-8 ${className}`}>
         <div className="container mx-auto px-4 text-center py-12">

@@ -66,7 +66,27 @@ const CartPage = () => {
 
             if (itemsError) throw itemsError;
 
-            // 3. Clear cart
+            // 3. Create notifications
+            // Buyer notification
+            await supabase.from('notifications').insert({
+                user_id: user.id,
+                title: 'Pedido Confirmado',
+                message: `Seu pedido #${order.id.slice(0, 8)} foi recebido com sucesso!`,
+                type: 'ORDER_STATUS'
+            });
+
+            // Seller notifications (group by seller)
+            const sellers = new Set(cartItems.map(item => item.products.seller_id));
+            for (const sellerId of sellers) {
+                await supabase.from('notifications').insert({
+                    user_id: sellerId,
+                    title: 'Nova Venda!',
+                    message: `Você tem um novo pedido #${order.id.slice(0, 8)}. Verifique seu painel de vendas.`,
+                    type: 'SALE'
+                });
+            }
+
+            // 4. Clear cart
             await clearCart();
 
             toast.success('Compra realizada com sucesso!');

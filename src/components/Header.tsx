@@ -48,21 +48,11 @@ export const Header = () => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
 
   const handleCartClick = () => {
-    if (!user) {
-      setAuthModalOpen(true);
-    } else {
-      // Navigate to cart
-      navigate('/cart');
-    }
+    navigate('/cart');
   };
 
   const handleBuyClick = () => {
-    if (!user) {
-      setAuthModalOpen(true);
-    } else {
-      // Navigate to checkout or cart
-      navigate('/cart');
-    }
+    navigate('/cart');
   };
 
   const handleSellClick = () => {
@@ -80,7 +70,7 @@ export const Header = () => {
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-background border-b border-border">
+      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border support-[backdrop-filter]:bg-background/60">
         {/* Top bar */}
         <div className="bg-primary text-primary-foreground text-[10px] sm:text-xs py-1">
           <div className="container mx-auto px-4 flex justify-between items-center text-center sm:text-left">
@@ -399,7 +389,7 @@ export const Header = () => {
         </div>
 
         {/* Categories nav */}
-        <nav className="border-t border-border bg-background">
+        <nav className="border-t border-border">
           <div className="container mx-auto px-4">
             <ul className="flex items-center gap-6 overflow-x-auto py-2.5 text-sm font-medium scrollbar-hide">
               <li

@@ -2,6 +2,7 @@ import { Star, Truck, Heart, ShoppingCart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { useCart } from "@/contexts/CartContext";
 
 import { Product } from "@/types";
 
@@ -16,6 +17,11 @@ const formatPrice = (price: number) => {
 
 export const ProductCard = ({ product, variant = "default" }: ProductCardProps) => {
   const navigate = useNavigate();
+  const { addToCart } = useCart();
+
+  // Cast partial product to Product for cart if enough info
+  const item = product as Product;
+
   const discount = product.originalPrice
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : 0;
@@ -23,7 +29,7 @@ export const ProductCard = ({ product, variant = "default" }: ProductCardProps) 
   return (
     <div
       onClick={() => navigate(`/product/${product.id}`)}
-      className="group bg-card rounded-xl overflow-hidden border border-border hover:border-secondary transition-all duration-300 cursor-pointer"
+      className="group bg-card rounded-xl overflow-hidden border border-border hover:border-secondary hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer"
     >
       {/* Image */}
       <div className="relative aspect-square overflow-hidden bg-white">
@@ -51,7 +57,10 @@ export const ProductCard = ({ product, variant = "default" }: ProductCardProps) 
           <Button
             variant="ghost"
             size="icon"
-            onClick={(e) => { e.stopPropagation(); /* Logic for cart */ }}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (item) addToCart(item); // Note: product in ProductCard is Partial<Product>, might need casting or check
+            }}
             className="bg-secondary hover:bg-secondary/90 text-secondary-foreground rounded-full h-11 w-11 md:h-9 md:w-9 shadow-md active:scale-90 transition-transform"
             aria-label="Adicionar ao carrinho"
           >

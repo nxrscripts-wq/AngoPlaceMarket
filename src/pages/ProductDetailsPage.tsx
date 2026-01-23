@@ -17,10 +17,13 @@ import {
     MapPin,
     Package,
     ArrowRight,
-    Loader2
+    Loader2,
+    MessageCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCart } from '@/contexts/CartContext';
+import { useChat } from '@/contexts/ChatContext';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { Product } from '@/types';
 import { useCallback } from 'react';
@@ -30,7 +33,24 @@ const ProductDetailsPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { user } = useAuth();
+    const { addToCart } = useCart();
+    const { startChat } = useChat();
     const [product, setProduct] = useState<Product | null>(null);
+
+    const handleStartChat = async () => {
+        if (!user) {
+            navigate('/login');
+            return;
+        }
+        if (!product || !product.seller_id) return;
+
+        try {
+            const roomId = await startChat(product.seller_id, product.id);
+            navigate('/chat');
+        } catch (error) {
+            console.error("Failed to start chat", error);
+        }
+    };
     const [loading, setLoading] = useState(true);
     const [quantity, setQuantity] = useState(1);
 
@@ -58,24 +78,9 @@ const ProductDetailsPage = () => {
     }, [fetchProduct]);
 
     const handleAddToCart = async () => {
-        if (!user) {
-            toast.error('Por favor, faça login para adicionar ao carrinho.');
-            return;
-        }
-
-        try {
-            const { error } = await supabase.from('cart_items').upsert({
-                user_id: user.id,
-                product_id: product.id,
-                quantity: quantity
-            });
-
-            if (error) throw error;
-            toast.success('Produto adicionado ao carrinho!');
-        } catch (error) {
-            console.error('Error adding to cart:', error);
-            toast.error('Erro ao adicionar ao carrinho.');
-        }
+        if (!product) return;
+        await addToCart(product, quantity);
+        // Note: useCart handles the toast
     };
 
     if (loading) {
@@ -206,9 +211,20 @@ const ProductDetailsPage = () => {
                                             <p className="text-xs text-muted-foreground">Vendido por</p>
                                             <p className="font-bold truncate">{product.profiles?.full_name || 'Vendedor Verificado'}</p>
                                         </div>
-                                        <Button variant="ghost" size="icon" className="rounded-full" aria-label="Ver perfil do vendedor">
-                                            <ArrowRight className="h-4 w-4" />
-                                        </Button>
+                                        <div className="flex gap-2 mt-2">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="flex-1 gap-2 text-xs h-8"
+                                                onClick={handleStartChat}
+                                            >
+                                                <MessageCircle className="h-3 w-3" />
+                                                Conversar
+                                            </Button>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" aria-label="Ver perfil do vendedor">
+                                                <ArrowRight className="h-4 w-4" />
+                                            </Button>
+                                        </div>
                                     </div>
                                     <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
                                         <MapPin className="h-3 w-3" />
