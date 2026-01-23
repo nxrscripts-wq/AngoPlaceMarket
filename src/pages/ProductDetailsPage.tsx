@@ -107,10 +107,10 @@ const ProductDetailsPage = () => {
                                 className="w-full h-full object-contain p-8 group-hover:scale-105 transition-transform duration-500"
                             />
                             <div className="absolute top-4 right-4 flex flex-col gap-2">
-                                <Button size="icon" variant="secondary" className="rounded-full shadow-lg">
+                                <Button size="icon" variant="secondary" className="rounded-full shadow-lg" aria-label="Adicionar aos favoritos">
                                     <Heart className="h-5 w-5" />
                                 </Button>
-                                <Button size="icon" variant="secondary" className="rounded-full shadow-lg">
+                                <Button size="icon" variant="secondary" className="rounded-full shadow-lg" aria-label="Partilhar produto">
                                     <Share2 className="h-5 w-5" />
                                 </Button>
                             </div>
@@ -206,7 +206,7 @@ const ProductDetailsPage = () => {
                                             <p className="text-xs text-muted-foreground">Vendido por</p>
                                             <p className="font-bold truncate">{product.profiles?.full_name || 'Vendedor Verificado'}</p>
                                         </div>
-                                        <Button variant="ghost" size="icon" className="rounded-full">
+                                        <Button variant="ghost" size="icon" className="rounded-full" aria-label="Ver perfil do vendedor">
                                             <ArrowRight className="h-4 w-4" />
                                         </Button>
                                     </div>

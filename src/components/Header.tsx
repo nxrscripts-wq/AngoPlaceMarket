@@ -22,6 +22,7 @@ import {
 import { NotificationsPanel } from "@/components/NotificationsPanel";
 import { AuthRequiredModal } from "@/components/AuthRequiredModal";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCart } from "@/contexts/CartContext";
 import { MARKETPLACE_CATEGORIES } from "@/lib/categories";
 
 const popularSearches = [
@@ -41,6 +42,7 @@ const recentSearches = [
 export const Header = () => {
   const navigate = useNavigate();
   const { user, profile, signOut, loading } = useAuth();
+  const { cartCount } = useCart();
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -80,9 +82,9 @@ export const Header = () => {
     <>
       <header className="sticky top-0 z-50 bg-background border-b border-border">
         {/* Top bar */}
-        <div className="bg-primary text-primary-foreground text-xs py-1.5">
-          <div className="container mx-auto px-4 flex justify-between items-center">
-            <span className="font-medium">🇦🇴 Entrega para toda Angola • Frete grátis acima de 15.000 Kz</span>
+        <div className="bg-primary text-primary-foreground text-[10px] sm:text-xs py-1">
+          <div className="container mx-auto px-4 flex justify-between items-center text-center sm:text-left">
+            <span className="font-medium flex-1 sm:flex-none">🇦🇴 Entrega para toda Angola • Frete grátis +15k</span>
             <div className="hidden md:flex gap-4">
               <span className="hover:text-secondary cursor-pointer transition-colors">Baixe o App</span>
               <span className="hover:text-secondary cursor-pointer transition-colors">Central de Ajuda</span>
@@ -96,8 +98,8 @@ export const Header = () => {
             {/* Mobile menu - NOW POWERED BY SHEET */}
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden text-card-foreground hover:text-secondary">
-                  <Menu className="h-6 w-6" />
+                <Button variant="ghost" size="icon" className="md:hidden text-card-foreground hover:text-secondary -ml-2" aria-label="Abrir menu lateral">
+                  <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="bg-card w-[300px] p-0 border-r border-border">
@@ -182,11 +184,20 @@ export const Header = () => {
 
             {/* Logo */}
             <Link to="/" className="flex-shrink-0 flex items-center hover:opacity-90 transition-opacity">
-              <img src="/logo.png" alt="AngoPlaceMarket" className="h-10 md:h-12 w-auto object-contain" />
+              <img src="/logo.png" alt="AngoPlaceMarket" className="h-8 md:h-12 w-auto object-contain" />
             </Link>
 
             {/* Search bar */}
-            <div className="flex-1 max-w-2xl hidden md:block relative">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (searchValue.trim()) {
+                  navigate(`/search?q=${encodeURIComponent(searchValue.trim())}`);
+                  setSearchFocused(false);
+                }
+              }}
+              className="flex-1 max-w-2xl hidden md:block relative"
+            >
               <div className="relative w-full">
                 <Input
                   type="text"
@@ -198,14 +209,10 @@ export const Header = () => {
                   onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
                 />
                 <Button
+                  type="submit"
                   size="icon"
                   className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full h-9 w-9 bg-secondary hover:bg-secondary/90 text-secondary-foreground"
-                  onClick={() => {
-                    if (searchValue.trim()) {
-                      navigate(`/search?q=${encodeURIComponent(searchValue.trim())}`);
-                      setSearchFocused(false);
-                    }
-                  }}
+                  aria-label="Submeter pesquisa"
                 >
                   <Search className="h-4 w-4" />
                 </Button>
@@ -251,11 +258,13 @@ export const Header = () => {
                   </div>
                 </div>
               )}
-            </div>
+            </form>
 
             {/* Actions */}
-            <div className="flex items-center gap-1 md:gap-3">
-              <NotificationsPanel />
+            <div className="flex items-center gap-1.5 md:gap-3 ml-auto">
+              <div className="hidden sm:block">
+                <NotificationsPanel />
+              </div>
 
               <Button
                 variant="ghost"
@@ -267,14 +276,26 @@ export const Header = () => {
               </Button>
 
               <Button
-                className="gap-2 bg-secondary hover:bg-secondary/90 text-secondary-foreground font-semibold px-4"
+                variant="ghost"
+                size="icon"
+                className="md:hidden text-card-foreground"
+                onClick={handleSellClick}
+                aria-label="Vender produto"
+              >
+                <Package className="h-5 w-5" />
+              </Button>
+
+              <Button
+                className="gap-2 bg-secondary hover:bg-secondary/90 text-secondary-foreground font-semibold h-9 md:h-11 px-3 md:px-4"
                 onClick={handleBuyClick}
               >
-                <ShoppingCart className="h-5 w-5" />
-                <span className="hidden sm:inline">Comprar</span>
-                <Badge className="bg-primary text-primary-foreground h-5 min-w-[20px] flex items-center justify-center p-0 text-xs">
-                  3
-                </Badge>
+                <ShoppingCart className="h-4 w-4 md:h-5 md:w-5" />
+                <span className="hidden lg:inline">Comprar</span>
+                {cartCount > 0 && (
+                  <Badge className="bg-primary text-primary-foreground h-4 md:h-5 min-w-[16px] md:min-w-[20px] flex items-center justify-center p-0 text-[10px] md:text-xs">
+                    {cartCount}
+                  </Badge>
+                )}
               </Button>
 
               {/* User Menu */}
@@ -282,10 +303,10 @@ export const Header = () => {
                 user ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="rounded-full">
-                        <Avatar className="h-8 w-8">
+                      <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 md:h-10 md:w-10" aria-label="Menu do utilizador">
+                        <Avatar className="h-7 w-7 md:h-8 md:w-8">
                           <AvatarImage src={user.user_metadata?.avatar_url} />
-                          <AvatarFallback className="bg-secondary text-secondary-foreground text-xs">
+                          <AvatarFallback className="bg-secondary text-secondary-foreground text-[10px] md:text-xs">
                             {getInitials()}
                           </AvatarFallback>
                         </Avatar>
@@ -323,20 +344,40 @@ export const Header = () => {
                   </DropdownMenu>
                 ) : (
                   <Button
-                    variant="outline"
-                    size="sm"
+                    variant="ghost"
+                    size="icon"
                     onClick={() => navigate('/login')}
-                    className="hidden sm:flex"
+                    className="sm:hidden text-card-foreground"
+                    aria-label="Entrar"
                   >
-                    Entrar
+                    <User className="h-5 w-5" />
                   </Button>
                 )
+              )}
+
+              {!loading && !user && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate('/login')}
+                  className="hidden sm:flex h-9 px-4"
+                >
+                  Entrar
+                </Button>
               )}
             </div>
           </div>
 
           {/* Mobile search - ENHANCED */}
-          <div className="mt-4 md:hidden animate-in slide-in-from-top-2 duration-300">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (searchValue.trim()) {
+                navigate(`/search?q=${encodeURIComponent(searchValue.trim())}`);
+              }
+            }}
+            className="mt-3 md:hidden animate-in slide-in-from-top-2 duration-300"
+          >
             <div className="relative w-full">
               <Input
                 type="text"
@@ -346,18 +387,15 @@ export const Header = () => {
                 onChange={(e) => setSearchValue(e.target.value)}
               />
               <Button
+                type="submit"
                 size="icon"
                 className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-xl h-11 w-11 bg-secondary text-secondary-foreground shadow-lg"
-                onClick={() => {
-                  if (searchValue.trim()) {
-                    navigate(`/search?q=${encodeURIComponent(searchValue.trim())}`);
-                  }
-                }}
+                aria-label="Submeter pesquisa"
               >
                 <Search className="h-5 w-5" />
               </Button>
             </div>
-          </div>
+          </form>
         </div>
 
         {/* Categories nav */}

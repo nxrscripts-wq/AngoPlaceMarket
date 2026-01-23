@@ -67,6 +67,7 @@ export interface CartItem {
     user_id: string;
     product_id: string;
     quantity: number;
+    created_at?: string;
     products: Product;
 }
 

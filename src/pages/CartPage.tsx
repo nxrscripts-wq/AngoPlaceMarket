@@ -1,14 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCart } from '@/contexts/CartContext';
+import { supabase } from '@/lib/supabase';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import {
     Trash2,
-    Plus,
-    Minus,
     ShoppingBag,
     ArrowRight,
     ShieldCheck,
@@ -17,86 +16,34 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { LoadingScreen } from '@/components/LoadingScreen';
-import { CartItem } from '@/types';
-
 
 const CartPage = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
-    const [cartItems, setCartItems] = useState<CartItem[]>([]);
-    const [loading, setLoading] = useState(true);
+    const { cartItems, updateQuantity, removeFromCart, clearCart, validateStock, cartTotal, loading } = useCart();
     const [checkoutLoading, setCheckoutLoading] = useState(false);
 
-    const fetchCart = useCallback(async () => {
-        try {
-            const { data, error } = await supabase
-                .from('cart_items')
-                .select('*, products(*)')
-                .eq('user_id', user?.id);
-
-            if (error) throw error;
-            setCartItems(data || []);
-        } catch (error) {
-            console.error('Error fetching cart:', error);
-        } finally {
-            setLoading(false);
-        }
-    }, [user]);
-
-    useEffect(() => {
-        if (user) {
-            fetchCart();
-        } else {
-            setLoading(false);
-        }
-    }, [user, fetchCart]);
-
-    const updateQuantity = async (id: string, newQty: number) => {
-        if (newQty < 1) return;
-
-        try {
-            const { error } = await supabase
-                .from('cart_items')
-                .update({ quantity: newQty })
-                .eq('id', id);
-
-            if (error) throw error;
-            setCartItems(items => items.map(item =>
-                item.id === id ? { ...item, quantity: newQty } : item
-            ));
-        } catch (error) {
-            toast.error('Erro ao atualizar quantidade.');
-        }
-    };
-
-    const removeItem = async (id: string) => {
-        try {
-            const { error } = await supabase
-                .from('cart_items')
-                .delete()
-                .eq('id', id);
-
-            if (error) throw error;
-            setCartItems(items => items.filter(item => item.id !== id));
-            toast.success('Item removido do carrinho.');
-        } catch (error) {
-            toast.error('Erro ao remover item.');
-        }
-    };
-
-    const calculateTotal = () => {
-        return cartItems.reduce((acc, item) => acc + (item.products.price * item.quantity), 0);
-    };
-
     const handleCheckout = async () => {
+        if (!user) {
+            navigate('/login?redirect=/cart');
+            return;
+        }
+
         setCheckoutLoading(true);
         try {
-            // 1. Create order
+            // 1. Validate Stock
+            const isValid = await validateStock();
+            if (!isValid) {
+                setCheckoutLoading(false);
+                return;
+            }
+
+            // 2. Create order
             const { data: order, error: orderError } = await supabase
                 .from('orders')
                 .insert({
-                    user_id: user?.id,
-                    total: calculateTotal(),
+                    user_id: user.id,
+                    total: cartTotal,
                     status: 'pending'
                 })
                 .select()
@@ -120,10 +67,10 @@ const CartPage = () => {
             if (itemsError) throw itemsError;
 
             // 3. Clear cart
-            await supabase.from('cart_items').delete().eq('user_id', user?.id);
+            await clearCart();
 
             toast.success('Compra realizada com sucesso!');
-            navigate('/orders');
+            navigate('/order-success');
         } catch (error) {
             console.error('Checkout error:', error);
             toast.error('Erro ao processar checkout.');
@@ -165,7 +112,7 @@ const CartPage = () => {
                                                     <h3 className="font-bold text-lg leading-tight lg:line-clamp-2">{item.products.name}</h3>
                                                     <p className="text-xs text-muted-foreground mt-1 uppercase tracking-wider">{item.products.category}</p>
                                                 </div>
-                                                <Button variant="ghost" size="icon" className="text-red-500 hover:bg-red-500/10 rounded-full" onClick={() => removeItem(item.id)}>
+                                                <Button variant="ghost" size="icon" className="text-red-500 hover:bg-red-500/10 rounded-full" onClick={() => removeFromCart(item.id)}>
                                                     <Trash2 className="h-5 w-5" />
                                                 </Button>
                                             </div>
@@ -196,7 +143,7 @@ const CartPage = () => {
                                 <div className="space-y-3 mb-6">
                                     <div className="flex justify-between text-sm">
                                         <span>Subtotal</span>
-                                        <span>{calculateTotal().toLocaleString('pt-AO')} Kz</span>
+                                        <span>{cartTotal.toLocaleString('pt-AO')} Kz</span>
                                     </div>
                                     <div className="flex justify-between text-sm">
                                         <span>Frete</span>
@@ -204,7 +151,7 @@ const CartPage = () => {
                                     </div>
                                     <div className="border-t border-white/20 pt-3 flex justify-between">
                                         <span className="font-black text-lg">Total</span>
-                                        <span className="font-black text-2xl">{calculateTotal().toLocaleString('pt-AO')} Kz</span>
+                                        <span className="font-black text-2xl">{cartTotal.toLocaleString('pt-AO')} Kz</span>
                                     </div>
                                 </div>
                                 <Button

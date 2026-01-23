@@ -39,6 +39,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const isLocked = loginAttempts.lockedUntil !== null && Date.now() < loginAttempts.lockedUntil;
 
+    // Load attempts from localStorage on mount
+    useEffect(() => {
+        const stored = localStorage.getItem('login_attempts');
+        if (stored) {
+            try {
+                const parsed = JSON.parse(stored);
+                // Verify if lock is still valid
+                if (parsed.lockedUntil && Date.now() > parsed.lockedUntil) {
+                    setLoginAttempts({ count: 0, lockedUntil: null });
+                    localStorage.removeItem('login_attempts');
+                } else {
+                    setLoginAttempts(parsed);
+                }
+            } catch (e) {
+                localStorage.removeItem('login_attempts');
+            }
+        }
+    }, []);
+
+    // Save attempts to localStorage on change
+    useEffect(() => {
+        localStorage.setItem('login_attempts', JSON.stringify(loginAttempts));
+    }, [loginAttempts]);
+
     // Check and update lock timer
     useEffect(() => {
         if (!loginAttempts.lockedUntil) {
@@ -52,6 +76,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             if (remaining === 0) {
                 setLoginAttempts({ count: 0, lockedUntil: null });
+                localStorage.removeItem('login_attempts');
             }
         };
 

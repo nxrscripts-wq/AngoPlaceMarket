@@ -80,7 +80,7 @@ export const ProductGrid = ({
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-black text-card-foreground">{title}</h2>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4">
             {[...Array(limit)].map((_, i) => (
               <div key={i} className="aspect-[3/4] bg-muted animate-pulse rounded-xl" />
             ))}
@@ -118,7 +118,7 @@ export const ProductGrid = ({
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 md:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-6">
           {products.map((product) => (
             <ProductCard key={product.id} product={formatProductForCard(product)} />
           ))}

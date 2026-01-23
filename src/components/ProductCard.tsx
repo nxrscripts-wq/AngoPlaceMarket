@@ -43,24 +43,26 @@ export const ProductCard = ({ product, variant = "default" }: ProductCardProps) 
             variant="ghost"
             size="icon"
             onClick={(e) => { e.stopPropagation(); /* Logic for heart */ }}
-            className="bg-card/90 hover:bg-secondary hover:text-secondary-foreground rounded-full h-10 w-10 md:h-9 md:w-9 border border-border shadow-md active:scale-90 transition-transform"
+            className="bg-card/90 hover:bg-secondary hover:text-secondary-foreground rounded-full h-11 w-11 md:h-9 md:w-9 border border-border shadow-md active:scale-90 transition-transform"
+            aria-label="Adicionar aos favoritos"
           >
-            <Heart className="h-5 w-5 md:h-4.5 md:w-4.5" />
+            <Heart className="h-5 w-5" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
             onClick={(e) => { e.stopPropagation(); /* Logic for cart */ }}
-            className="bg-secondary hover:bg-secondary/90 text-secondary-foreground rounded-full h-10 w-10 md:h-9 md:w-9 shadow-md active:scale-90 transition-transform"
+            className="bg-secondary hover:bg-secondary/90 text-secondary-foreground rounded-full h-11 w-11 md:h-9 md:w-9 shadow-md active:scale-90 transition-transform"
+            aria-label="Adicionar ao carrinho"
           >
-            <ShoppingCart className="h-5 w-5 md:h-4.5 md:w-4.5" />
+            <ShoppingCart className="h-5 w-5" />
           </Button>
         </div>
       </div>
 
       {/* Content */}
       <div className="p-3">
-        <h3 className="text-sm font-medium line-clamp-2 mb-2 min-h-[40px] text-card-foreground">
+        <h3 className="text-base sm:text-sm font-medium line-clamp-2 mb-2 min-h-[40px] text-card-foreground">
           {product.name}
         </h3>
 
@@ -79,8 +81,8 @@ export const ProductCard = ({ product, variant = "default" }: ProductCardProps) 
         {/* Rating */}
         <div className="flex items-center gap-1 mb-2">
           <Star className="h-3 w-3 fill-rating text-rating" />
-          <span className="text-xs font-medium text-card-foreground">{product.rating}</span>
-          <span className="text-xs text-muted-foreground">
+          <span className="text-sm font-medium text-card-foreground">{product.rating}</span>
+          <span className="text-sm text-muted-foreground">
             ({product.reviews.toLocaleString()})
           </span>
           {product.sold && (

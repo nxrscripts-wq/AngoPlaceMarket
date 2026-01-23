@@ -231,6 +231,7 @@ const PublishPage = () => {
                                         <Input
                                             id="stock"
                                             type="number"
+                                            inputMode="numeric"
                                             min="1"
                                             required
                                             value={formData.stock}
@@ -270,6 +271,7 @@ const PublishPage = () => {
                                             <Input
                                                 id="price"
                                                 type="number"
+                                                inputMode="decimal"
                                                 placeholder="0.00"
                                                 className="pl-10"
                                                 required
