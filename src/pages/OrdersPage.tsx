@@ -2,8 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -70,8 +69,7 @@ const OrdersPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-background text-card-foreground">
-            <Header />
+        <>
 
             <main className="container mx-auto px-4 py-12">
                 <div className="max-w-4xl mx-auto space-y-8">
@@ -167,8 +165,7 @@ const OrdersPage = () => {
                 </div>
             </main>
 
-            <Footer />
-        </div>
+        </>
     );
 };
 

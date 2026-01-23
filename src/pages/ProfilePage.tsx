@@ -2,8 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -216,8 +215,7 @@ const ProfilePage = () => {
     }
 
     return (
-        <div className="min-h-screen bg-background">
-            <Header />
+        <>
 
             <main className="container mx-auto px-4 py-8">
                 <div className="max-w-2xl mx-auto">
@@ -528,8 +526,7 @@ const ProfilePage = () => {
                 </div>
             </main>
 
-            <Footer />
-        </div>
+        </>
     );
 };
 

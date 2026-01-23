@@ -1,5 +1,4 @@
-import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
+
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -28,8 +27,7 @@ const CareersPage = () => {
     ];
 
     return (
-        <div className="min-h-screen bg-background text-card-foreground">
-            <Header />
+        <>
 
             <main>
                 {/* Hero */}
@@ -124,8 +122,7 @@ const CareersPage = () => {
                 </div>
             </main>
 
-            <Footer />
-        </div>
+        </>
     );
 };
 

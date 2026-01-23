@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
+
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -267,8 +266,7 @@ const AdminPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-background text-card-foreground">
-            <Header />
+        <>
             <main className="container mx-auto px-4 py-8 md:py-12">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
                     <div className="flex items-center gap-4">
@@ -427,8 +425,7 @@ const AdminPage = () => {
                 </DialogContent>
             </Dialog>
 
-            <Footer />
-        </div>
+        </>
     );
 };
 

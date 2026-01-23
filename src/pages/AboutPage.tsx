@@ -1,12 +1,10 @@
-import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
+
 import { Card, CardContent } from '@/components/ui/card';
 import { Users, Target, Shield, Rocket, Heart, Award } from 'lucide-react';
 
 const AboutPage = () => {
     return (
-        <div className="min-h-screen bg-background text-card-foreground">
-            <Header />
+        <>
 
             <main>
                 {/* Hero Section */}
@@ -125,8 +123,7 @@ const AboutPage = () => {
                 </section>
             </main>
 
-            <Footer />
-        </div>
+        </>
     );
 };
 

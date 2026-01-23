@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
+
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -86,8 +85,7 @@ const ProductDetailsPage = () => {
     if (!product) return null;
 
     return (
-        <div className="min-h-screen bg-background text-card-foreground">
-            <Header />
+        <>
             <main className="container mx-auto px-4 py-8">
                 {/* Breadcrumbs / Back button */}
                 <Button
@@ -253,8 +251,7 @@ const ProductDetailsPage = () => {
                     </div>
                 </div>
             </main>
-            <Footer />
-        </div>
+        </>
     );
 };
 

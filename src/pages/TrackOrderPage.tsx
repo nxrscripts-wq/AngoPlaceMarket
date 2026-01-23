@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { TrackingData, TrackingStep } from '@/types';
 
-import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,8 +52,7 @@ const TrackOrderPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-background text-card-foreground">
-            <Header />
+        <>
 
             <main className="container mx-auto px-4 py-16">
                 <div className="max-w-4xl mx-auto space-y-12">
@@ -182,8 +180,7 @@ const TrackOrderPage = () => {
                 </div>
             </main>
 
-            <Footer />
-        </div>
+        </>
     );
 };
 

@@ -112,7 +112,7 @@ export const FlashDeals = () => {
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4">
             {flashProducts.map((product) => (
               <ProductCard key={product.id} product={formatProductForCard(product)} variant="flash" />
             ))}

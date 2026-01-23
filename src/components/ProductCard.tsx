@@ -43,17 +43,17 @@ export const ProductCard = ({ product, variant = "default" }: ProductCardProps) 
             variant="ghost"
             size="icon"
             onClick={(e) => { e.stopPropagation(); /* Logic for heart */ }}
-            className="bg-card/90 hover:bg-secondary hover:text-secondary-foreground rounded-full h-10 w-10 md:h-8 md:w-8 border border-border shadow-sm active:scale-90 transition-transform"
+            className="bg-card/90 hover:bg-secondary hover:text-secondary-foreground rounded-full h-10 w-10 md:h-9 md:w-9 border border-border shadow-md active:scale-90 transition-transform"
           >
-            <Heart className="h-5 w-5 md:h-4 md:w-4" />
+            <Heart className="h-5 w-5 md:h-4.5 md:w-4.5" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
             onClick={(e) => { e.stopPropagation(); /* Logic for cart */ }}
-            className="bg-secondary hover:bg-secondary/90 text-secondary-foreground rounded-full h-10 w-10 md:h-8 md:w-8 shadow-sm active:scale-90 transition-transform"
+            className="bg-secondary hover:bg-secondary/90 text-secondary-foreground rounded-full h-10 w-10 md:h-9 md:w-9 shadow-md active:scale-90 transition-transform"
           >
-            <ShoppingCart className="h-5 w-5 md:h-4 md:w-4" />
+            <ShoppingCart className="h-5 w-5 md:h-4.5 md:w-4.5" />
           </Button>
         </div>
       </div>
@@ -66,7 +66,7 @@ export const ProductCard = ({ product, variant = "default" }: ProductCardProps) 
 
         {/* Price */}
         <div className="flex items-baseline gap-2 mb-2">
-          <span className="text-lg md:text-xl font-bold text-secondary">
+          <span className="text-base sm:text-lg md:text-xl font-bold text-secondary">
             {formatPrice(product.price)}
           </span>
           {product.originalPrice && (

@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -111,8 +110,7 @@ const PublishPage = () => {
 
     if (success) {
         return (
-            <div className="min-h-screen bg-background flex flex-col">
-                <Header />
+            <>
                 <main className="flex-1 flex items-center justify-center p-4">
                     <Card className="max-w-md w-full text-center p-8 animate-in zoom-in-95 duration-300">
                         <div className="flex justify-center mb-6">
@@ -135,14 +133,12 @@ const PublishPage = () => {
                         </div>
                     </Card>
                 </main>
-                <Footer />
-            </div>
+            </>
         );
     }
 
     return (
-        <div className="min-h-screen bg-background">
-            <Header />
+        <>
             <main className="container mx-auto px-4 py-8">
                 <div className="max-w-3xl mx-auto">
                     <div className="flex items-center gap-3 mb-8">
@@ -354,8 +350,7 @@ const PublishPage = () => {
                     </form>
                 </div>
             </main>
-            <Footer />
-        </div>
+        </>
     );
 };
 

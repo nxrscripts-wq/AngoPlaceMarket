@@ -14,21 +14,21 @@ const Index = () => {
           title="Super Descontos"
           subtitle="As melhores ofertas com preços baixos garantidos"
           filterType="super_discounts"
-          viewAllLink="/search?filter=discounts"
-          className="bg-muted/30"
+          className="bg-muted/30 py-12 md:py-16"
         />
         <ProductGrid
           title="Novidades"
           subtitle="Produtos recém-chegados ao marketplace"
           filterType="new_arrivals"
           viewAllLink="/search?filter=new"
+          className="py-12 md:py-16"
         />
         <ProductGrid
           title="Mais Vendidos"
           subtitle="Os favoritos da comunidade AngoPlace"
           filterType="best_sellers"
           viewAllLink="/search"
-          className="bg-muted/30"
+          className="bg-muted/30 py-12 md:py-16"
         />
       </main>
     </div>

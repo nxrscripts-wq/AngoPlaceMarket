@@ -1,13 +1,11 @@
-import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ShieldCheck, FileText, Lock, Scale } from 'lucide-react';
 
 const TermsPage = () => {
     return (
-        <div className="min-h-screen bg-background text-card-foreground">
-            <Header />
+        <>
 
             <main className="container mx-auto px-4 py-12">
                 <div className="max-w-4xl mx-auto">
@@ -128,8 +126,7 @@ const TermsPage = () => {
                 </div>
             </main>
 
-            <Footer />
-        </div>
+        </>
     );
 };
 

@@ -2,8 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -138,8 +137,7 @@ const CartPage = () => {
     }
 
     return (
-        <div className="min-h-screen bg-background text-card-foreground">
-            <Header />
+        <>
             <main className="container mx-auto px-4 py-8">
                 <div className="flex items-center gap-3 mb-8">
                     <div className="w-12 h-12 bg-secondary/10 rounded-xl flex items-center justify-center">
@@ -264,8 +262,7 @@ const CartPage = () => {
                     </div>
                 )}
             </main>
-            <Footer />
-        </div>
+        </>
     );
 };
 

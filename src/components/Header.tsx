@@ -254,7 +254,7 @@ export const Header = () => {
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-1 md:gap-2">
+            <div className="flex items-center gap-1 md:gap-3">
               <NotificationsPanel />
 
               <Button
@@ -341,13 +341,13 @@ export const Header = () => {
               <Input
                 type="text"
                 placeholder="O que procuras hoje?"
-                className="w-full pr-12 rounded-2xl border-2 border-border bg-muted/20 text-card-foreground placeholder:text-muted-foreground focus:border-secondary h-12 text-base"
+                className="w-full pr-14 rounded-2xl border-2 border-border bg-muted/20 text-card-foreground placeholder:text-muted-foreground focus:border-secondary h-14 text-base shadow-inner"
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
               />
               <Button
                 size="icon"
-                className="absolute right-1 top-1/2 -translate-y-1/2 rounded-xl h-10 w-10 bg-secondary text-secondary-foreground"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-xl h-11 w-11 bg-secondary text-secondary-foreground shadow-lg"
                 onClick={() => {
                   if (searchValue.trim()) {
                     navigate(`/search?q=${encodeURIComponent(searchValue.trim())}`);

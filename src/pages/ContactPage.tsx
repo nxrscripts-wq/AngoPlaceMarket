@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -36,8 +35,7 @@ const ContactPage = () => {
 
     if (submitted) {
         return (
-            <div className="min-h-screen bg-background">
-                <Header />
+            <>
                 <main className="container mx-auto px-4 py-24 flex items-center justify-center">
                     <Card className="max-w-md w-full p-12 text-center space-y-8 animate-in zoom-in-95 duration-500">
                         <div className="w-24 h-24 bg-green-500/10 rounded-full flex items-center justify-center mx-auto">
@@ -52,14 +50,12 @@ const ContactPage = () => {
                         </Button>
                     </Card>
                 </main>
-                <Footer />
-            </div>
+            </>
         );
     }
 
     return (
-        <div className="min-h-screen bg-background text-card-foreground">
-            <Header />
+        <>
 
             <main className="container mx-auto px-4 py-16">
                 <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
@@ -142,8 +138,7 @@ const ContactPage = () => {
                 </div>
             </main>
 
-            <Footer />
-        </div>
+        </>
     );
 };
 
