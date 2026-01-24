@@ -21,136 +21,121 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 const LOCAL_STORAGE_KEY = 'apm_cart';
 
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const { user } = useAuth();
+    const { user, loading: authLoading } = useAuth();
     const [cartItems, setCartItems] = useState<CartItem[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Initial load
+    // Consolidated Load & Sync Logic
     useEffect(() => {
-        const loadCart = async () => {
+        if (authLoading) return;
+
+        const initializeCart = async () => {
             setLoading(true);
-            if (user) {
-                // Load from DB
-                const { data, error } = await supabase
-                    .from('cart_items')
-                    .select('*, products(*)')
-                    .eq('user_id', user.id);
-
-                if (!error && data) {
-                    setCartItems(data);
-                }
-            } else {
-                // Load from Local Storage
-                const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-                if (stored) {
-                    try {
-                        setCartItems(JSON.parse(stored));
-                    } catch (e) {
-                        localStorage.removeItem(LOCAL_STORAGE_KEY);
-                    }
-                }
-            }
-            setLoading(false);
-        };
-
-        loadCart();
-    }, [user]);
-
-    // Sync Local Storage -> DB on Login
-    useEffect(() => {
-        const syncCart = async () => {
-            if (!user) return;
-
-            const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-            if (!stored) return;
-
-            const localItems: CartItem[] = JSON.parse(stored);
-            if (localItems.length === 0) return;
-
             try {
-                // Insert local items to DB
-                // Handle duplicates: logic could be complex, for simplified MVP we insert new ones
-                // or update existing. For now, we'll iterate and upsert.
-
-                for (const item of localItems) {
-                    // Check if already in DB
-                    const { data: existing } = await supabase
-                        .from('cart_items')
-                        .select('id, quantity')
-                        .eq('user_id', user.id)
-                        .eq('product_id', item.product_id)
-                        .single();
-
-                    if (existing) {
-                        // Update quantity
-                        await supabase
-                            .from('cart_items')
-                            .update({ quantity: existing.quantity + item.quantity })
-                            .eq('id', existing.id);
+                if (!user) {
+                    // GUEST: Load from LocalStorage
+                    const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+                    if (stored) {
+                        try {
+                            setCartItems(JSON.parse(stored));
+                        } catch {
+                            localStorage.removeItem(LOCAL_STORAGE_KEY);
+                            setCartItems([]);
+                        }
                     } else {
-                        // Insert new
-                        await supabase
-                            .from('cart_items')
-                            .insert({
-                                user_id: user.id,
-                                product_id: item.product_id,
-                                quantity: item.quantity
-                            });
+                        setCartItems([]);
+                    }
+                } else {
+                    // USER: Check for local items to sync first
+                    const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+                    if (stored) {
+                        const localItems: CartItem[] = JSON.parse(stored);
+                        if (localItems.length > 0) {
+                            // SYNC PROCESS
+                            for (const item of localItems) {
+                                const { data: existing } = await supabase
+                                    .from('cart_items')
+                                    .select('id, quantity')
+                                    .eq('user_id', user.id)
+                                    .eq('product_id', item.product_id)
+                                    .single();
+
+                                if (existing) {
+                                    await supabase
+                                        .from('cart_items')
+                                        .update({ quantity: existing.quantity + item.quantity })
+                                        .eq('id', existing.id);
+                                } else {
+                                    await supabase
+                                        .from('cart_items')
+                                        .insert({
+                                            user_id: user.id,
+                                            product_id: item.product_id,
+                                            quantity: item.quantity
+                                        });
+                                }
+                            }
+                            // Clean up local after sync
+                            localStorage.removeItem(LOCAL_STORAGE_KEY);
+                            toast.success('Seu carrinho temporário foi salvo na sua conta!');
+                        }
+                    }
+
+                    // Load final state from DB
+                    const { data, error } = await supabase
+                        .from('cart_items')
+                        .select('*, products(*)')
+                        .eq('user_id', user.id)
+                        .order('created_at', { ascending: false });
+
+                    if (!error && data) {
+                        setCartItems(data);
                     }
                 }
-
-                // Clear local storage after sync
-                localStorage.removeItem(LOCAL_STORAGE_KEY);
-
-                // Refresh cart from DB
-                const { data } = await supabase
-                    .from('cart_items')
-                    .select('*, products(*)')
-                    .eq('user_id', user.id);
-
-                if (data) setCartItems(data);
-                toast.success('Carrinho sincronizado com sua conta!');
-
             } catch (error) {
-                console.error('Error syncing cart:', error);
+                console.error('Error initializing cart:', error);
+                toast.error('Erro ao carregar carrinho.');
+            } finally {
+                setLoading(false);
             }
         };
 
-        syncCart();
-    }, [user]);
+        initializeCart();
+    }, [user, authLoading]);
 
-    // Save to Local Storage when items change (only for guests)
+    // Save to Local Storage ONLY for guests
     useEffect(() => {
-        if (!user) {
+        if (!user && !authLoading) {
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cartItems));
         }
-    }, [cartItems, user]);
+    }, [cartItems, user, authLoading]);
 
     const addToCart = useCallback(async (product: Product, quantity = 1) => {
+        if (quantity < 1) return;
+
+        // Optimistic Update
+        const tempId = crypto.randomUUID();
+        setCartItems(prev => {
+            const existing = prev.find(p => p.product_id === product.id);
+            if (existing) {
+                return prev.map(p => p.product_id === product.id
+                    ? { ...p, quantity: p.quantity + quantity }
+                    : p);
+            }
+            const newItem: CartItem = {
+                id: tempId,
+                user_id: user ? user.id : 'guest',
+                product_id: product.id,
+                quantity,
+                created_at: new Date().toISOString(),
+                products: product
+            };
+            return [...prev, newItem];
+        });
+        toast.success('Produto adicionado ao carrinho');
+
         if (user) {
-            // DB Logic
             try {
-                // Optimistic UI
-                const tempId = crypto.randomUUID();
-                const newItem: CartItem = {
-                    id: tempId,
-                    user_id: user.id,
-                    product_id: product.id,
-                    quantity,
-                    created_at: new Date().toISOString(),
-                    products: product
-                };
-
-                // Check if exists in state to update optimistic
-                setCartItems(prev => {
-                    const exists = prev.find(p => p.product_id === product.id);
-                    if (exists) {
-                        return prev.map(p => p.product_id === product.id ? { ...p, quantity: p.quantity + quantity } : p);
-                    }
-                    return [...prev, newItem];
-                });
-
-                // Check DB for existing item
                 const { data: existing } = await supabase
                     .from('cart_items')
                     .select('id, quantity')
@@ -159,109 +144,68 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     .single();
 
                 if (existing) {
-                    const { error } = await supabase
+                    await supabase
                         .from('cart_items')
                         .update({ quantity: existing.quantity + quantity })
                         .eq('id', existing.id);
-                    if (error) throw error;
                 } else {
-                    const { error, data } = await supabase
+                    const { data } = await supabase
                         .from('cart_items')
                         .insert({
                             user_id: user.id,
                             product_id: product.id,
                             quantity
                         })
-                        .select()
+                        .select('id')
                         .single();
-                    if (error) throw error;
-                    // Update ID from DB
+
+                    // Update the temp ID with real DB ID
                     if (data) {
-                        setCartItems(prev => prev.map(p => p.id === tempId ? { ...p, id: data.id } : p));
+                        setCartItems(prev => prev.map(item => item.id === tempId ? { ...item, id: data.id } : item));
                     }
                 }
-                toast.success('Produto adicionado ao carrinho');
             } catch (error) {
-                console.error(error);
-                toast.error('Erro ao adicionar ao carrinho');
-                // Revert state if needed (omitted for MVP brevity, but recommended)
+                console.error('Error adding to backend cart:', error);
+                // In a perfect world, we revert the optimistic update here
+                toast.error('Erro ao sincronizar com o servidor');
             }
-        } else {
-            // Local Logic
-            setCartItems(prev => {
-                const existing = prev.find(item => item.product_id === product.id);
-                let newItems;
-                if (existing) {
-                    newItems = prev.map(item =>
-                        item.product_id === product.id
-                            ? { ...item, quantity: item.quantity + quantity }
-                            : item
-                    );
-                } else {
-                    const newItem: CartItem = {
-                        id: crypto.randomUUID(),
-                        user_id: 'guest',
-                        product_id: product.id,
-                        quantity,
-                        created_at: new Date().toISOString(),
-                        products: product
-                    };
-                    newItems = [...prev, newItem];
-                }
-                return newItems;
-            });
-            toast.success('Produto adicionado ao carrinho');
         }
     }, [user]);
 
     const removeFromCart = useCallback(async (id: string) => {
+        setCartItems(prev => prev.filter(item => item.id !== id));
+
         if (user) {
             try {
-                // Optimistic
-                setCartItems(prev => prev.filter(item => item.id !== id));
-
-                const { error } = await supabase
-                    .from('cart_items')
-                    .delete()
-                    .eq('id', id);
-
-                if (error) throw error;
+                await supabase.from('cart_items').delete().eq('id', id);
             } catch (error) {
-                toast.error('Erro ao remover item');
-                // Revert logic here if needed
+                console.error('Error removing item:', error);
             }
-        } else {
-            setCartItems(prev => prev.filter(item => item.id !== id));
         }
     }, [user]);
 
     const updateQuantity = useCallback(async (id: string, quantity: number) => {
         if (quantity < 1) return;
 
-        if (user) {
-            // Optimistic
-            setCartItems(prev => prev.map(item => item.id === id ? { ...item, quantity } : item));
+        setCartItems(prev => prev.map(item => item.id === id ? { ...item, quantity } : item));
 
+        if (user) {
             try {
-                const { error } = await supabase
+                await supabase
                     .from('cart_items')
                     .update({ quantity })
                     .eq('id', id);
-                if (error) throw error;
             } catch (error) {
-                toast.error('Erro ao atualizar quantidade');
+                console.error('Error updating quantity:', error);
             }
-        } else {
-            setCartItems(prev => prev.map(item => item.id === id ? { ...item, quantity } : item));
         }
     }, [user]);
 
     const clearCart = useCallback(async () => {
+        setCartItems([]);
         if (user) {
-            setCartItems([]);
             await supabase.from('cart_items').delete().eq('user_id', user.id);
         } else {
-            setCartItems([]);
             localStorage.removeItem(LOCAL_STORAGE_KEY);
         }
     }, [user]);

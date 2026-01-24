@@ -117,3 +117,30 @@ export interface MarketplaceSetting {
     value: any;
     updated_at: string;
 }
+
+export interface ChatRoom {
+    id: string;
+    buyer_id: string;
+    seller_id: string;
+    product_id: string;
+    order_id?: string;
+    last_message?: string;
+    last_message_at?: string;
+    unread_count_buyer: number;
+    unread_count_seller: number;
+    status: 'active' | 'archived' | 'blocked';
+    created_at: string;
+    profiles_buyer?: UserProfile;
+    profiles_seller?: UserProfile;
+    products?: Product;
+}
+
+export interface ChatMessage {
+    id: string;
+    room_id: string;
+    sender_id: string;
+    content: string;
+    image_url?: string;
+    read: boolean;
+    created_at: string;
+}

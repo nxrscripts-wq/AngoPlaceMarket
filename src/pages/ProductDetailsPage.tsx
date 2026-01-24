@@ -222,6 +222,13 @@ const ProductDetailsPage = () => {
                                     <ShoppingCart className="mr-3 h-6 w-6" />
                                     Adicionar ao Carrinho
                                 </Button>
+                                <Button
+                                    variant="outline"
+                                    className="h-16 px-8 text-lg font-bold border-2 rounded-2xl hover:bg-muted"
+                                    onClick={handleStartChat}
+                                >
+                                    <MessageCircle className="h-6 w-6" />
+                                </Button>
                             </div>
                         </div>
 

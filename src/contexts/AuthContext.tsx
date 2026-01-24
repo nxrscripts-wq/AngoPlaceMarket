@@ -16,11 +16,12 @@ interface AuthContextType {
     isLocked: boolean;
     lockTimeRemaining: number;
     signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+    signInWithOtp: (identifier: string, type?: 'email' | 'phone') => Promise<{ error: Error | null }>;
     signUp: (email: string, password: string, metadata?: Record<string, unknown>) => Promise<{ error: Error | null }>;
     signOut: () => Promise<void>;
     resetPassword: (email: string) => Promise<{ error: Error | null }>;
     updatePassword: (newPassword: string) => Promise<{ error: Error | null }>;
-    verifyOtp: (email: string, token: string) => Promise<{ error: Error | null }>;
+    verifyOtp: (identifier: string, token: string, type: 'email' | 'phone') => Promise<{ error: Error | null, data?: any }>;
     profile: UserProfile | null;
 }
 
@@ -288,16 +289,46 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     }, []);
 
-    const verifyOtp = useCallback(async (email: string, token: string) => {
+    const signInWithOtp = useCallback(async (identifier: string, type: 'email' | 'phone' = 'email') => {
         try {
-            const { error } = await supabase.auth.verifyOtp({
-                email,
-                token,
-                type: 'recovery',
-            });
+            const { error } = await supabase.auth.signInWithOtp({
+                [type]: identifier,
+                options: {
+                    shouldCreateUser: false, // Only for existing users by default in login page, but Supabase creates if not exists. 
+                    // Let's allow strictly for login, but usually OTP is used for both.
+                    // For "Login", we usually assume user exists.
+                }
+            } as any); // Type cast might be needed depending on supabase-js version if strict
+
             return { error };
         } catch (err) {
             return { error: err as Error };
+        }
+    }, []);
+
+    const verifyOtp = useCallback(async (identifier: string, token: string, type: 'email' | 'phone') => {
+        try {
+            const params: any = {
+                token,
+                type: type === 'phone' ? 'sms' : 'email',
+            };
+
+            if (type === 'phone') {
+                params.phone = identifier;
+            } else {
+                params.email = identifier;
+            }
+
+            const { data, error } = await supabase.auth.verifyOtp(params);
+
+            if (!error && data.user) {
+                // Reset attempts on successful OTP login
+                setLoginAttempts({ count: 0, lockedUntil: null });
+            }
+
+            return { error, data };
+        } catch (err) {
+            return { error: err as Error, data: { user: null, session: null } };
         }
     }, []);
 
@@ -311,6 +342,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 isLocked,
                 lockTimeRemaining,
                 signIn,
+                signInWithOtp,
                 signUp,
                 signOut,
                 resetPassword,
