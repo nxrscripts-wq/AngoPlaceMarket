@@ -54,24 +54,31 @@ const ProductDetailsPage = () => {
     const [loading, setLoading] = useState(true);
     const [quantity, setQuantity] = useState(1);
 
+    const [error, setError] = useState<string | null>(null);
+
     const fetchProduct = useCallback(async () => {
         try {
-            const { data, error } = await supabase
+            setLoading(true);
+            setError(null);
+
+            const { data, error: fetchError } = await supabase
                 .from('products')
                 .select('*, profiles(full_name, avatar_url)')
                 .eq('id', id)
                 .single();
 
-            if (error) throw error;
+            if (fetchError) throw fetchError;
             setProduct(data as Product);
         } catch (error) {
             console.error('Error fetching product:', error);
-            toast.error('Produto não encontrado.');
-            navigate('/');
+            setError('Não foi possível carregar o produto. Verifique a sua conexão.');
+            // Only redirect if it's strictly a "not found" 404-like error (code PGRST116 for single())
+            // But Supabase JS client doesn't always strictly return codes easier to parse.
+            // For now, prompt retry.
         } finally {
             setLoading(false);
         }
-    }, [id, navigate]);
+    }, [id]);
 
     useEffect(() => {
         fetchProduct();
@@ -80,11 +87,30 @@ const ProductDetailsPage = () => {
     const handleAddToCart = async () => {
         if (!product) return;
         await addToCart(product, quantity);
-        // Note: useCart handles the toast
     };
 
     if (loading) {
         return <LoadingScreen />;
+    }
+
+    if (error) {
+        return (
+            <div className="container mx-auto px-4 py-20 flex flex-col items-center justify-center text-center">
+                <div className="bg-destructive/10 p-6 rounded-full mb-6">
+                    <Package className="h-12 w-12 text-destructive" />
+                </div>
+                <h1 className="text-2xl font-bold mb-2">Erro ao carregar produto</h1>
+                <p className="text-muted-foreground mb-6 max-w-md">{error}</p>
+                <div className="flex gap-4">
+                    <Button onClick={fetchProduct} variant="default" size="lg">
+                        Tentar Novamente
+                    </Button>
+                    <Button onClick={() => navigate('/')} variant="ghost" size="lg">
+                        Voltar ao Início
+                    </Button>
+                </div>
+            </div>
+        );
     }
 
     if (!product) return null;

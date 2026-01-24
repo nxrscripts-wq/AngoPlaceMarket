@@ -8,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Layout } from "./components/Layout";
+import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
 
 // Critical Routes (Eager load or lightweight)
 import Index from "./pages/Index";
@@ -63,36 +64,38 @@ const App = () => (
             <Sonner />
             <BrowserRouter>
               <Layout>
-                <Suspense fallback={<LoadingScreen />}>
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route path="/register" element={<RegisterPage />} />
-                    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                    <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-                    <Route path="/product/:id" element={<ProductDetailsPage />} />
-                    <Route path="/publish" element={<ProtectedRoute><PublishPage /></ProtectedRoute>} />
-                    <Route path="/seller" element={<ProtectedRoute><SellerPage /></ProtectedRoute>} />
-                    <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminPage /></ProtectedRoute>} />
-                    <Route path="/category/:id" element={<CategoryPage />} />
-                    <Route path="/search" element={<SearchPage />} />
-                    <Route path="/how-it-works" element={<HowItWorksPage />} />
-                    <Route path="/cart" element={<CartPage />} />
-                    <Route path="/order-success" element={<ProtectedRoute><OrderSuccessPage /></ProtectedRoute>} />
-                    <Route path="/help" element={<HelpCenterPage />} />
-                    <Route path="/orders" element={<ProtectedRoute><OrdersPage /></ProtectedRoute>} />
-                    <Route path="/returns" element={<ProtectedRoute><ReturnsPage /></ProtectedRoute>} />
-                    <Route path="/contact" element={<ContactPage />} />
-                    <Route path="/about" element={<AboutPage />} />
-                    <Route path="/terms" element={<TermsPage />} />
-                    <Route path="/careers" element={<CareersPage />} />
-                    <Route path="/wishlist" element={<ProtectedRoute><WishlistPage /></ProtectedRoute>} />
-                    <Route path="/chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
-                    <Route path="/track" element={<ProtectedRoute><TrackOrderPage /></ProtectedRoute>} />
-                    <Route path="/track/:id" element={<ProtectedRoute><TrackOrderPage /></ProtectedRoute>} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </Suspense>
+                <GlobalErrorBoundary>
+                  <Suspense fallback={<LoadingScreen />}>
+                    <Routes>
+                      <Route path="/" element={<Index />} />
+                      <Route path="/login" element={<LoginPage />} />
+                      <Route path="/register" element={<RegisterPage />} />
+                      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                      <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+                      <Route path="/product/:id" element={<ProductDetailsPage />} />
+                      <Route path="/publish" element={<ProtectedRoute><PublishPage /></ProtectedRoute>} />
+                      <Route path="/seller" element={<ProtectedRoute><SellerPage /></ProtectedRoute>} />
+                      <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminPage /></ProtectedRoute>} />
+                      <Route path="/category/:id" element={<CategoryPage />} />
+                      <Route path="/search" element={<SearchPage />} />
+                      <Route path="/how-it-works" element={<HowItWorksPage />} />
+                      <Route path="/cart" element={<CartPage />} />
+                      <Route path="/order-success" element={<ProtectedRoute><OrderSuccessPage /></ProtectedRoute>} />
+                      <Route path="/help" element={<HelpCenterPage />} />
+                      <Route path="/orders" element={<ProtectedRoute><OrdersPage /></ProtectedRoute>} />
+                      <Route path="/returns" element={<ProtectedRoute><ReturnsPage /></ProtectedRoute>} />
+                      <Route path="/contact" element={<ContactPage />} />
+                      <Route path="/about" element={<AboutPage />} />
+                      <Route path="/terms" element={<TermsPage />} />
+                      <Route path="/careers" element={<CareersPage />} />
+                      <Route path="/wishlist" element={<ProtectedRoute><WishlistPage /></ProtectedRoute>} />
+                      <Route path="/chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
+                      <Route path="/track" element={<ProtectedRoute><TrackOrderPage /></ProtectedRoute>} />
+                      <Route path="/track/:id" element={<ProtectedRoute><TrackOrderPage /></ProtectedRoute>} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </Suspense>
+                </GlobalErrorBoundary>
               </Layout>
             </BrowserRouter>
           </TooltipProvider>

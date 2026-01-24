@@ -123,7 +123,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         const initSession = async () => {
             try {
-                const { data: { session } } = await supabase.auth.getSession();
+                // Initial session check
+                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+                if (sessionError) {
+                    console.error('Session init error:', sessionError);
+                    if (isMounted) setLoading(false);
+                    return;
+                }
+
                 if (!isMounted) return;
 
                 setSession(session);
@@ -131,7 +139,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 setUser(currentUser);
 
                 if (currentUser) {
-                    await fetchProfile(currentUser.id);
+                    // Timeout-protected profile fetch
+                    try {
+                        // Create a promise that rejects after 5 seconds
+                        const timeoutPromise = new Promise((_, reject) =>
+                            setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
+                        );
+
+                        await Promise.race([
+                            fetchProfile(currentUser.id),
+                            timeoutPromise
+                        ]);
+                    } catch (e) {
+                        console.warn('Profile fetch timed out or failed, continuing without profile', e);
+                        // Don't block app load on profile failure
+                    }
                 } else {
                     setProfile(null);
                 }
