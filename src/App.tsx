@@ -38,6 +38,8 @@ const TrackOrderPage = lazy(() => import("./pages/TrackOrderPage"));
 const HowItWorksPage = lazy(() => import("./pages/HowItWorksPage"));
 const ChatPage = lazy(() => import("./pages/ChatPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const PaymentHistoryPage = lazy(() => import("./pages/PaymentHistoryPage"));
+const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
 
 // ... (in Routes)
 
@@ -67,31 +69,35 @@ const App = () => (
                 <GlobalErrorBoundary>
                   <Suspense fallback={<LoadingScreen />}>
                     <Routes>
-                      <Route path="/" element={<Index />} />
                       <Route path="/login" element={<LoginPage />} />
                       <Route path="/register" element={<RegisterPage />} />
                       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+
+                      {/* Protected Marketplace Routes */}
+                      <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
                       <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-                      <Route path="/product/:id" element={<ProductDetailsPage />} />
+                      <Route path="/product/:id" element={<ProtectedRoute><ProductDetailsPage /></ProtectedRoute>} />
                       <Route path="/publish" element={<ProtectedRoute><PublishPage /></ProtectedRoute>} />
                       <Route path="/seller" element={<ProtectedRoute><SellerPage /></ProtectedRoute>} />
                       <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminPage /></ProtectedRoute>} />
-                      <Route path="/category/:id" element={<CategoryPage />} />
-                      <Route path="/search" element={<SearchPage />} />
-                      <Route path="/how-it-works" element={<HowItWorksPage />} />
-                      <Route path="/cart" element={<CartPage />} />
+                      <Route path="/category/:id" element={<ProtectedRoute><CategoryPage /></ProtectedRoute>} />
+                      <Route path="/search" element={<ProtectedRoute><SearchPage /></ProtectedRoute>} />
+                      <Route path="/how-it-works" element={<ProtectedRoute><HowItWorksPage /></ProtectedRoute>} />
+                      <Route path="/cart" element={<ProtectedRoute><CartPage /></ProtectedRoute>} />
                       <Route path="/order-success" element={<ProtectedRoute><OrderSuccessPage /></ProtectedRoute>} />
-                      <Route path="/help" element={<HelpCenterPage />} />
+                      <Route path="/help" element={<ProtectedRoute><HelpCenterPage /></ProtectedRoute>} />
                       <Route path="/orders" element={<ProtectedRoute><OrdersPage /></ProtectedRoute>} />
+                      <Route path="/payments" element={<ProtectedRoute><PaymentHistoryPage /></ProtectedRoute>} />
+                      <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
                       <Route path="/returns" element={<ProtectedRoute><ReturnsPage /></ProtectedRoute>} />
-                      <Route path="/contact" element={<ContactPage />} />
-                      <Route path="/about" element={<AboutPage />} />
-                      <Route path="/terms" element={<TermsPage />} />
-                      <Route path="/careers" element={<CareersPage />} />
+                      <Route path="/contact" element={<ProtectedRoute><ContactPage /></ProtectedRoute>} />
+                      <Route path="/about" element={<ProtectedRoute><AboutPage /></ProtectedRoute>} />
+                      <Route path="/terms" element={<ProtectedRoute><TermsPage /></ProtectedRoute>} />
+                      <Route path="/careers" element={<ProtectedRoute><CareersPage /></ProtectedRoute>} />
                       <Route path="/wishlist" element={<ProtectedRoute><WishlistPage /></ProtectedRoute>} />
-                      <Route path="/chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
                       <Route path="/track" element={<ProtectedRoute><TrackOrderPage /></ProtectedRoute>} />
                       <Route path="/track/:id" element={<ProtectedRoute><TrackOrderPage /></ProtectedRoute>} />
+
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </Suspense>

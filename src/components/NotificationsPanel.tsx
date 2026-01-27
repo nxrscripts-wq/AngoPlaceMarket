@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, Check, CheckCheck, Package, X, AlertCircle } from 'lucide-react';
+import { Bell, Check, CheckCheck, Package, X, AlertCircle, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     Popover,
@@ -12,6 +12,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { Link } from 'react-router-dom';
 
 interface Notification {
     id: string;
@@ -208,6 +209,16 @@ export const NotificationsPanel = () => {
                         </div>
                     )}
                 </ScrollArea>
+
+                {/* Footer with link to full page */}
+                <div className="border-t border-border p-3">
+                    <Link
+                        to="/notifications"
+                        className="block w-full text-center text-sm text-secondary hover:underline font-medium"
+                    >
+                        Ver todas as notificações
+                    </Link>
+                </div>
             </PopoverContent>
         </Popover>
     );

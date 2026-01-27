@@ -14,6 +14,7 @@ import {
     Settings,
     Mail,
     MapPin,
+    History,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,6 +29,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { Product, UserProfile, Order, FraudAlert, MarketplaceSetting } from '@/types';
+import { emailService } from '@/lib/emailService';
 
 // Tab Components
 import { DashboardTab } from './admin/tabs/DashboardTab';
@@ -36,6 +38,7 @@ import { ProductsTab } from './admin/tabs/ProductsTab';
 import { AntifraudTab } from './admin/tabs/AntifraudTab';
 import { CommunicationsTab } from './admin/tabs/CommunicationsTab';
 import { SettingsTab } from './admin/tabs/SettingsTab';
+import { ActionLogsTab } from './admin/tabs/ActionLogsTab';
 
 const AdminPage = () => {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -165,6 +168,17 @@ const AdminPage = () => {
                     message: `O seu anúncio "${product.name}" foi aprovado.`,
                     type: 'SUCCESS'
                 });
+
+                // Enviar Email
+                await emailService.sendEmail({
+                    userId: product.seller_id,
+                    recipient: product.profiles?.email,
+                    subject: 'Produto Aprovado! 🎉',
+                    template: 'product_approved',
+                    payload: {
+                        product_name: product.name
+                    }
+                });
             }
             toast.success('Produto aprovado!');
             fetchAllData();
@@ -191,6 +205,18 @@ const AdminPage = () => {
                     title: 'Produto Rejeitado ⚠️',
                     message: `O seu anúncio "${product.name}" foi rejeitado. Motivo: ${reason}`,
                     type: 'ERROR'
+                });
+
+                // Enviar Email
+                await emailService.sendEmail({
+                    userId: product.seller_id,
+                    recipient: product.profiles?.email,
+                    subject: 'Atualização sobre o seu anúncio',
+                    template: 'product_rejected',
+                    payload: {
+                        product_name: product.name,
+                        rejection_reason: reason
+                    }
                 });
             }
             toast.success('Produto rejeitado.');
@@ -231,11 +257,39 @@ const AdminPage = () => {
     };
 
     // User Actions
-    const handleBlockUser = async (id: string, blocked: boolean) => {
+    const handleBlockUser = async (id: string, blocked: boolean, duration?: string) => {
         try {
-            const { error } = await supabase.from('profiles').update({ is_blocked: blocked }).eq('id', id);
+            const blockData: any = { is_blocked: blocked };
+
+            // Calculate unblock date if temporary ban
+            if (blocked && duration && duration !== 'permanent') {
+                const durationMap: Record<string, number> = {
+                    '24h': 24 * 60 * 60 * 1000,
+                    '7d': 7 * 24 * 60 * 60 * 1000,
+                    '30d': 30 * 24 * 60 * 60 * 1000,
+                };
+                const ms = durationMap[duration];
+                if (ms) {
+                    blockData.blocked_until = new Date(Date.now() + ms).toISOString();
+                }
+            } else if (blocked && duration === 'permanent') {
+                blockData.blocked_until = null; // Permanent
+            }
+
+            const { error } = await supabase.from('profiles').update(blockData).eq('id', id);
             if (error) throw error;
-            toast.success(blocked ? 'Utilizador bloqueado.' : 'Utilizador desbloqueado.');
+
+            // Log the action (fire and forget - ignore errors if table doesn't exist)
+            const adminId = (await supabase.auth.getUser()).data.user?.id;
+            supabase.from('admin_action_logs').insert({
+                admin_id: adminId,
+                action_type: blocked ? (duration === 'permanent' ? 'user_banned_perm' : 'user_banned_temp') : 'user_unblocked',
+                target_type: 'user',
+                target_id: id,
+                details: { duration }
+            });
+
+            toast.success(blocked ? `Utilizador banido (${duration || 'permanente'})` : 'Utilizador desbloqueado.');
             fetchAllData();
         } catch (error) {
             toast.error('Erro ao alterar status do utilizador.');
@@ -307,6 +361,10 @@ const AdminPage = () => {
                                 <Settings className="h-4 w-4 mr-2" />
                                 Config
                             </TabsTrigger>
+                            <TabsTrigger value="logs" className="rounded-xl py-3 border border-transparent data-[state=active]:border-border data-[state=active]:bg-card text-xs md:text-sm">
+                                <History className="h-4 w-4 mr-2" />
+                                Logs
+                            </TabsTrigger>
                         </TabsList>
                     </div>
 
@@ -358,6 +416,10 @@ const AdminPage = () => {
 
                             <TabsContent value="settings">
                                 <SettingsTab settings={settings} onSaveSetting={() => { }} />
+                            </TabsContent>
+
+                            <TabsContent value="logs">
+                                <ActionLogsTab />
                             </TabsContent>
                         </div>
                     )}

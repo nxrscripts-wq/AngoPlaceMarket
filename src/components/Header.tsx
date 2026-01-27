@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Search, ShoppingCart, Menu, Package, TrendingUp, Clock, User, LogOut, ShieldCheck } from "lucide-react";
+import { Search, ShoppingCart, Menu, Package, TrendingUp, Clock, User, LogOut, ShieldCheck, MessageCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +23,7 @@ import { NotificationsPanel } from "@/components/NotificationsPanel";
 import { AuthRequiredModal } from "@/components/AuthRequiredModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
+import { useChat } from "@/contexts/ChatContext";
 import { MARKETPLACE_CATEGORIES } from "@/lib/categories";
 
 const popularSearches = [
@@ -43,6 +44,7 @@ export const Header = () => {
   const navigate = useNavigate();
   const { user, profile, signOut, loading } = useAuth();
   const { cartCount } = useCart();
+  const { totalUnread } = useChat();
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -274,6 +276,24 @@ export const Header = () => {
 
             {/* Actions */}
             <div className="flex items-center gap-1.5 md:gap-3 ml-auto">
+              {/* Chat Icon */}
+              {user && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative text-card-foreground hover:text-secondary"
+                  onClick={() => navigate('/chat')}
+                  aria-label="Mensagens"
+                >
+                  <MessageCircle className="h-5 w-5" />
+                  {totalUnread > 0 && (
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-secondary text-[9px] font-bold text-secondary-foreground shadow ring-1 ring-background">
+                      {totalUnread > 9 ? '9+' : totalUnread}
+                    </span>
+                  )}
+                </Button>
+              )}
+
               <div className="hidden sm:block">
                 <NotificationsPanel />
               </div>

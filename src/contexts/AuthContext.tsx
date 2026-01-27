@@ -8,6 +8,11 @@ interface LoginAttempt {
     lockedUntil: number | null;
 }
 
+interface OtpAttempt {
+    count: number;
+    lockedUntil: number | null;
+}
+
 interface AuthContextType {
     user: User | null;
     session: Session | null;
@@ -15,6 +20,10 @@ interface AuthContextType {
     loginAttempts: LoginAttempt;
     isLocked: boolean;
     lockTimeRemaining: number;
+    // OTP rate limiting
+    otpAttempts: OtpAttempt;
+    isOtpLocked: boolean;
+    otpLockTimeRemaining: number;
     signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
     signInWithOtp: (identifier: string, type?: 'email' | 'phone') => Promise<{ error: Error | null }>;
     signUp: (email: string, password: string, metadata?: Record<string, unknown>) => Promise<{ error: Error | null }>;
@@ -22,12 +31,15 @@ interface AuthContextType {
     resetPassword: (email: string) => Promise<{ error: Error | null }>;
     updatePassword: (newPassword: string) => Promise<{ error: Error | null }>;
     verifyOtp: (identifier: string, token: string, type: 'email' | 'phone') => Promise<{ error: Error | null, data?: any }>;
+    resetOtpAttempts: () => void;
+    signInWithGoogle: () => Promise<{ error: Error | null }>;
     profile: UserProfile | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const MAX_LOGIN_ATTEMPTS = 3;
+const MAX_OTP_ATTEMPTS = 3;
 const LOCKOUT_DURATION_MS = 30000; // 30 seconds
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -38,7 +50,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [loginAttempts, setLoginAttempts] = useState<LoginAttempt>({ count: 0, lockedUntil: null });
     const [lockTimeRemaining, setLockTimeRemaining] = useState(0);
 
+    // OTP rate limiting state
+    const [otpAttempts, setOtpAttempts] = useState<OtpAttempt>({ count: 0, lockedUntil: null });
+    const [otpLockTimeRemaining, setOtpLockTimeRemaining] = useState(0);
+
     const isLocked = loginAttempts.lockedUntil !== null && Date.now() < loginAttempts.lockedUntil;
+    const isOtpLocked = otpAttempts.lockedUntil !== null && Date.now() < otpAttempts.lockedUntil;
 
     // Load attempts from localStorage on mount
     useEffect(() => {
@@ -85,6 +102,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const interval = setInterval(updateTimer, 1000);
         return () => clearInterval(interval);
     }, [loginAttempts.lockedUntil]);
+
+    // Check and update OTP lock timer
+    useEffect(() => {
+        if (!otpAttempts.lockedUntil) {
+            setOtpLockTimeRemaining(0);
+            return;
+        }
+
+        const updateOtpTimer = () => {
+            const remaining = Math.max(0, otpAttempts.lockedUntil! - Date.now());
+            setOtpLockTimeRemaining(remaining);
+
+            if (remaining === 0) {
+                setOtpAttempts({ count: 0, lockedUntil: null });
+            }
+        };
+
+        updateOtpTimer();
+        const interval = setInterval(updateOtpTimer, 1000);
+        return () => clearInterval(interval);
+    }, [otpAttempts.lockedUntil]);
 
     // Initialize session and fetch profile
     useEffect(() => {
@@ -307,6 +345,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, []);
 
     const verifyOtp = useCallback(async (identifier: string, token: string, type: 'email' | 'phone') => {
+        // Check if OTP verification is locked
+        if (isOtpLocked) {
+            return {
+                error: new Error('Verificação bloqueada. Aguarde antes de tentar novamente.'),
+                data: { user: null, session: null }
+            };
+        }
+
         try {
             const params: any = {
                 token,
@@ -321,14 +367,47 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             const { data, error } = await supabase.auth.verifyOtp(params);
 
-            if (!error && data.user) {
-                // Reset attempts on successful OTP login
-                setLoginAttempts({ count: 0, lockedUntil: null });
+            if (error) {
+                // Increment OTP attempts on failure
+                const newCount = otpAttempts.count + 1;
+
+                if (newCount >= MAX_OTP_ATTEMPTS) {
+                    const lockedUntil = Date.now() + LOCKOUT_DURATION_MS;
+                    setOtpAttempts({ count: newCount, lockedUntil });
+                } else {
+                    setOtpAttempts({ count: newCount, lockedUntil: null });
+                }
+
+                return { error: new Error('Código inválido ou expirado.'), data: { user: null, session: null } };
             }
 
-            return { error, data };
+            if (data.user) {
+                // Reset all attempts on successful OTP login
+                setLoginAttempts({ count: 0, lockedUntil: null });
+                setOtpAttempts({ count: 0, lockedUntil: null });
+            }
+
+            return { error: null, data };
         } catch (err) {
             return { error: err as Error, data: { user: null, session: null } };
+        }
+    }, [isOtpLocked, otpAttempts.count]);
+
+    const resetOtpAttempts = useCallback(() => {
+        setOtpAttempts({ count: 0, lockedUntil: null });
+    }, []);
+
+    const signInWithGoogle = useCallback(async () => {
+        try {
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: window.location.origin,
+                },
+            });
+            return { error };
+        } catch (err) {
+            return { error: err as Error };
         }
     }, []);
 
@@ -341,6 +420,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 loginAttempts,
                 isLocked,
                 lockTimeRemaining,
+                otpAttempts,
+                isOtpLocked,
+                otpLockTimeRemaining,
                 signIn,
                 signInWithOtp,
                 signUp,
@@ -348,6 +430,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 resetPassword,
                 updatePassword,
                 verifyOtp,
+                resetOtpAttempts,
+                signInWithGoogle,
                 profile,
             }}
         >

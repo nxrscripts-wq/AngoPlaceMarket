@@ -2,6 +2,7 @@ import { HeroBanner } from "@/components/HeroBanner";
 import { Categories } from "@/components/Categories";
 import { FlashDeals } from "@/components/FlashDeals";
 import { ProductGrid } from "@/components/ProductGrid";
+import { NearbyProducts } from "@/components/NearbyProducts";
 
 const Index = () => {
   return (
@@ -10,6 +11,9 @@ const Index = () => {
         <HeroBanner />
         <Categories />
         <FlashDeals />
+        <div className="container mx-auto px-4">
+          <NearbyProducts maxProducts={8} />
+        </div>
         <ProductGrid
           title="Super Descontos"
           subtitle="As melhores ofertas com preços baixos garantidos"

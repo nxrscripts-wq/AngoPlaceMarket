@@ -27,6 +27,7 @@ import { useChat } from '@/contexts/ChatContext';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { Product } from '@/types';
 import { useCallback } from 'react';
+import { ReviewList } from '@/components/reviews/ReviewList';
 
 
 const ProductDetailsPage = () => {
@@ -57,27 +58,42 @@ const ProductDetailsPage = () => {
     const [error, setError] = useState<string | null>(null);
 
     const fetchProduct = useCallback(async () => {
-        try {
-            setLoading(true);
-            setError(null);
+        let attempts = 0;
+        const maxAttempts = 3;
 
-            const { data, error: fetchError } = await supabase
-                .from('products')
-                .select('*, profiles(full_name, avatar_url)')
-                .eq('id', id)
-                .single();
+        while (attempts < maxAttempts) {
+            try {
+                if (attempts === 0) setLoading(true);
+                setError(null);
 
-            if (fetchError) throw fetchError;
-            setProduct(data as Product);
-        } catch (error) {
-            console.error('Error fetching product:', error);
-            setError('Não foi possível carregar o produto. Verifique a sua conexão.');
-            // Only redirect if it's strictly a "not found" 404-like error (code PGRST116 for single())
-            // But Supabase JS client doesn't always strictly return codes easier to parse.
-            // For now, prompt retry.
-        } finally {
-            setLoading(false);
+                const { data, error: fetchError } = await supabase
+                    .from('products')
+                    .select('*, profiles(full_name, avatar_url)')
+                    .eq('id', id)
+                    .single();
+
+                if (fetchError) throw fetchError;
+                setProduct(data as Product);
+                break; // Success
+            } catch (error: any) {
+                console.error(`Error fetching product (attempt ${attempts + 1}):`, error);
+
+                // Retry only on AbortError or network error
+                if (attempts < maxAttempts - 1 && (error.name === 'AbortError' || error.message?.includes('fetch'))) {
+                    attempts++;
+                    await new Promise(resolve => setTimeout(resolve, 1000 * attempts)); // Backoff
+                    continue;
+                }
+
+                setError('Não foi possível carregar o produto. Verifique a sua conexão.');
+                break;
+            } finally {
+                if (attempts === maxAttempts || attempts === 0) { // Only unset loading on final attempt or success
+                    // actually handle finally block carefully
+                }
+            }
         }
+        setLoading(false);
     }, [id]);
 
     useEffect(() => {
@@ -298,6 +314,12 @@ const ProductDetailsPage = () => {
                     <div className="prose prose-invert max-w-none text-muted-foreground whitespace-pre-wrap">
                         {product.description}
                     </div>
+                </div>
+
+                {/* Reviews Section */}
+                <div className="mt-8 bg-card/30 rounded-3xl p-8 border border-border">
+                    <h2 className="text-2xl font-bold mb-6">Avaliações dos Compradores</h2>
+                    <ReviewList productId={product.id} />
                 </div>
             </main>
         </>

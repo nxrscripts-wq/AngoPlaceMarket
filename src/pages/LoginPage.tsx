@@ -8,15 +8,28 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import { Eye, EyeOff, Loader2, Lock, Mail, AlertTriangle, Smartphone, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Lock, Mail, AlertTriangle, Smartphone, ArrowRight, ShieldAlert, Timer } from 'lucide-react';
 import { validatePassword } from '@/lib/security';
+import { cn } from '@/lib/utils';
 
 const LoginPage = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const redirectTo = searchParams.get('redirect') || '/';
 
-    const { signIn, signInWithOtp, verifyOtp, isLocked, lockTimeRemaining, loginAttempts } = useAuth();
+    const {
+        signIn,
+        signInWithOtp,
+        verifyOtp,
+        signInWithGoogle,
+        isLocked,
+        lockTimeRemaining,
+        loginAttempts,
+        isOtpLocked,
+        otpLockTimeRemaining,
+        otpAttempts,
+        resetOtpAttempts
+    } = useAuth();
 
     // Login Mode
     const [activeTab, setActiveTab] = useState<'password' | 'otp'>('password');
@@ -33,8 +46,12 @@ const LoginPage = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [otpShake, setOtpShake] = useState(false);
 
     const lockSeconds = Math.ceil(lockTimeRemaining / 1000);
+    const otpLockSeconds = Math.ceil(otpLockTimeRemaining / 1000);
+    const remainingLoginAttempts = 3 - loginAttempts.count;
+    const remainingOtpAttempts = 3 - otpAttempts.count;
 
     const handlePasswordLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -86,7 +103,7 @@ const LoginPage = () => {
 
     const handleVerifyOtp = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (otp.length !== 6) return;
+        if (otp.length !== 6 || isOtpLocked) return;
 
         setLoading(true);
         setError(null);
@@ -95,11 +112,32 @@ const LoginPage = () => {
         const { error } = await verifyOtp(identifier, otp, otpType);
 
         if (error) {
-            setError('Código inválido ou expirado.');
+            setError(error.message);
+            setOtp('');
+            // Trigger shake animation
+            setOtpShake(true);
+            setTimeout(() => setOtpShake(false), 500);
         } else {
             navigate(redirectTo);
         }
         setLoading(false);
+    };
+
+    const handleGoogleLogin = async () => {
+        setLoading(true);
+        setError(null);
+        const { error } = await signInWithGoogle();
+        if (error) {
+            setError(error.message);
+            setLoading(false);
+        }
+    };
+
+    const handleBackToRequest = () => {
+        setOtpStep('request');
+        setOtp('');
+        setError(null);
+        resetOtpAttempts();
     };
 
     return (
@@ -128,11 +166,39 @@ const LoginPage = () => {
 
                         {isLocked && (
                             <Alert className="mb-4 border-orange-500/50 bg-orange-500/10">
-                                <Lock className="h-4 w-4 text-orange-500" />
-                                <AlertDescription className="text-orange-600">
-                                    Conta bloqueada. Tente novamente em <strong>{lockSeconds}</strong> segundos.
-                                </AlertDescription>
+                                <div className="flex items-center gap-3">
+                                    <div className="relative">
+                                        <Lock className="h-5 w-5 text-orange-500" />
+                                        <div className="absolute -top-1 -right-1 h-2 w-2 bg-orange-500 rounded-full animate-pulse" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-orange-600 font-medium text-sm">Conta bloqueada temporariamente</p>
+                                        <p className="text-orange-500/80 text-xs mt-0.5">
+                                            Aguarde <span className="font-mono font-bold">{lockSeconds}s</span> para tentar novamente
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center justify-center w-10 h-10 rounded-full border-2 border-orange-500/50 bg-orange-500/20">
+                                        <span className="text-orange-600 font-bold text-sm font-mono">{lockSeconds}</span>
+                                    </div>
+                                </div>
                             </Alert>
+                        )}
+
+                        {/* Attempts remaining indicator */}
+                        {!isLocked && loginAttempts.count > 0 && activeTab === 'password' && (
+                            <div className={cn(
+                                "mb-4 flex items-center gap-2 text-xs p-2 rounded-lg",
+                                remainingLoginAttempts === 2 && "bg-yellow-500/10 text-yellow-600",
+                                remainingLoginAttempts === 1 && "bg-red-500/10 text-red-600"
+                            )}>
+                                <ShieldAlert className="h-4 w-4" />
+                                <span>
+                                    {remainingLoginAttempts === 1
+                                        ? 'Última tentativa! A conta será bloqueada após esta tentativa.'
+                                        : `${remainingLoginAttempts} tentativas restantes`
+                                    }
+                                </span>
+                            </div>
                         )}
 
                         <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="space-y-4">
@@ -259,8 +325,43 @@ const LoginPage = () => {
                                             <p className="text-muted-foreground">{otpType === 'email' ? email : `+244 ${phone}`}</p>
                                         </div>
 
-                                        <div className="flex justify-center">
-                                            <InputOTP maxLength={6} value={otp} onChange={setOtp}>
+                                        {/* OTP Lock Alert */}
+                                        {isOtpLocked && (
+                                            <Alert className="border-orange-500/50 bg-orange-500/10">
+                                                <div className="flex items-center gap-3">
+                                                    <Timer className="h-5 w-5 text-orange-500" />
+                                                    <div className="flex-1">
+                                                        <p className="text-orange-600 font-medium text-sm">Verificação bloqueada</p>
+                                                        <p className="text-orange-500/80 text-xs">
+                                                            Aguarde <span className="font-mono font-bold">{otpLockSeconds}s</span>
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </Alert>
+                                        )}
+
+                                        {/* OTP Attempts remaining */}
+                                        {!isOtpLocked && otpAttempts.count > 0 && (
+                                            <div className={cn(
+                                                "flex items-center gap-2 text-xs p-2 rounded-lg",
+                                                remainingOtpAttempts === 2 && "bg-yellow-500/10 text-yellow-600",
+                                                remainingOtpAttempts === 1 && "bg-red-500/10 text-red-600"
+                                            )}>
+                                                <ShieldAlert className="h-4 w-4" />
+                                                <span>
+                                                    {remainingOtpAttempts === 1
+                                                        ? 'Última tentativa!'
+                                                        : `${remainingOtpAttempts} tentativas restantes`
+                                                    }
+                                                </span>
+                                            </div>
+                                        )}
+
+                                        <div className={cn(
+                                            "flex justify-center transition-transform",
+                                            otpShake && "animate-[shake_0.5s_ease-in-out]"
+                                        )}>
+                                            <InputOTP maxLength={6} value={otp} onChange={setOtp} disabled={isOtpLocked}>
                                                 <InputOTPGroup>
                                                     <InputOTPSlot index={0} />
                                                     <InputOTPSlot index={1} />
@@ -272,7 +373,7 @@ const LoginPage = () => {
                                             </InputOTP>
                                         </div>
 
-                                        <Button type="submit" className="w-full" disabled={loading || otp.length !== 6}>
+                                        <Button type="submit" className="w-full" disabled={loading || otp.length !== 6 || isOtpLocked}>
                                             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Verificar e Entrar'}
                                         </Button>
 
@@ -281,7 +382,7 @@ const LoginPage = () => {
                                             variant="ghost"
                                             size="sm"
                                             className="w-full text-xs"
-                                            onClick={() => setOtpStep('request')}
+                                            onClick={handleBackToRequest}
                                         >
                                             Voltar / Alterar contacto
                                         </Button>
@@ -295,9 +396,43 @@ const LoginPage = () => {
                                 <div className="w-full border-t border-border" />
                             </div>
                             <div className="relative flex justify-center text-xs uppercase">
-                                <span className="bg-card px-2 text-muted-foreground">Ou</span>
+                                <span className="bg-card px-2 text-muted-foreground">Ou continuar com</span>
                             </div>
                         </div>
+
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full gap-2 mb-4 hover:bg-muted/50 transition-colors"
+                            onClick={handleGoogleLogin}
+                            disabled={loading || isLocked}
+                        >
+                            {loading ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <>
+                                    <svg className="h-4 w-4" viewBox="0 0 24 24">
+                                        <path
+                                            d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                                            fill="#4285F4"
+                                        />
+                                        <path
+                                            d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                                            fill="#34A853"
+                                        />
+                                        <path
+                                            d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                                            fill="#FBBC05"
+                                        />
+                                        <path
+                                            d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                                            fill="#EA4335"
+                                        />
+                                    </svg>
+                                    Google
+                                </>
+                            )}
+                        </Button>
 
                         <p className="text-center text-sm text-muted-foreground">
                             Não tem uma conta?{' '}

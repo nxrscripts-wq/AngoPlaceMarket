@@ -34,7 +34,7 @@ import { format } from 'date-fns';
 
 interface UsersTabProps {
     users: UserProfile[];
-    onBlockUser: (id: string, blocked: boolean) => void;
+    onBlockUser: (id: string, blocked: boolean, duration?: string) => void;
     onSetRisk: (id: string, level: 'low' | 'medium' | 'high') => void;
     onViewProfile: (user: UserProfile) => void;
 }
@@ -152,23 +152,53 @@ export const UsersTab = ({ users, onBlockUser, onSetRisk, onViewProfile }: Users
                                                     <MoreVertical className="h-4 w-4" />
                                                 </Button>
                                             </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="bg-card border-border border shadow-2xl">
+                                            <DropdownMenuContent align="end" className="bg-card border-border border shadow-2xl w-56">
                                                 <DropdownMenuItem onClick={() => onViewProfile(u)}>
                                                     Ver Detalhes
                                                 </DropdownMenuItem>
                                                 <DropdownMenuSeparator />
-                                                <DropdownMenuItem
-                                                    onClick={() => onBlockUser(u.id, !u.is_blocked)}
-                                                    className={u.is_blocked ? "text-green-500" : "text-red-500"}
-                                                >
-                                                    {u.is_blocked ? (
-                                                        <><UserCheck className="mr-2 h-4 w-4" /> Desbloquear</>
-                                                    ) : (
-                                                        <><UserX className="mr-2 h-4 w-4" /> Bloquear Conta</>
-                                                    )}
-                                                </DropdownMenuItem>
+                                                {u.is_blocked ? (
+                                                    <DropdownMenuItem
+                                                        onClick={() => onBlockUser(u.id, false)}
+                                                        className="text-green-500"
+                                                    >
+                                                        <UserCheck className="mr-2 h-4 w-4" /> Desbloquear
+                                                    </DropdownMenuItem>
+                                                ) : (
+                                                    <>
+                                                        <DropdownMenuItem
+                                                            onClick={() => onBlockUser(u.id, true, '24h')}
+                                                            className="text-orange-500"
+                                                        >
+                                                            <UserX className="mr-2 h-4 w-4" /> Ban 24 horas
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            onClick={() => onBlockUser(u.id, true, '7d')}
+                                                            className="text-orange-600"
+                                                        >
+                                                            <UserX className="mr-2 h-4 w-4" /> Ban 7 dias
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            onClick={() => onBlockUser(u.id, true, '30d')}
+                                                            className="text-red-500"
+                                                        >
+                                                            <UserX className="mr-2 h-4 w-4" /> Ban 30 dias
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem
+                                                            onClick={() => onBlockUser(u.id, true, 'permanent')}
+                                                            className="text-red-600 font-semibold"
+                                                        >
+                                                            <UserX className="mr-2 h-4 w-4" /> Ban Permanente
+                                                        </DropdownMenuItem>
+                                                    </>
+                                                )}
+                                                <DropdownMenuSeparator />
                                                 <DropdownMenuItem onClick={() => onSetRisk(u.id, 'high')} className="text-orange-500">
-                                                    <AlertTriangle className="mr-2 h-4 w-4" /> Marcar como Alto Risco
+                                                    <AlertTriangle className="mr-2 h-4 w-4" /> Marcar Alto Risco
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => onSetRisk(u.id, 'low')} className="text-green-500">
+                                                    <Shield className="mr-2 h-4 w-4" /> Remover Risco
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>

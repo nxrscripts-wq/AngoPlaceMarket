@@ -9,13 +9,24 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import { Loader2, Mail, Lock, ArrowLeft, CheckCircle, AlertTriangle, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Mail, Lock, ArrowLeft, CheckCircle, AlertTriangle, Eye, EyeOff, ShieldAlert, Timer } from 'lucide-react';
+import { PasswordStrengthIndicator } from '@/components/ui/PasswordStrengthIndicator';
+import { cn } from '@/lib/utils';
+import { emailService } from '@/lib/emailService';
 
 type Step = 'email' | 'otp' | 'newPassword' | 'success';
 
 const ForgotPasswordPage = () => {
     const navigate = useNavigate();
-    const { resetPassword, verifyOtp, updatePassword } = useAuth();
+    const {
+        resetPassword,
+        verifyOtp,
+        updatePassword,
+        isOtpLocked,
+        otpLockTimeRemaining,
+        otpAttempts,
+        resetOtpAttempts
+    } = useAuth();
 
     const [step, setStep] = useState<Step>('email');
     const [email, setEmail] = useState('');
@@ -25,6 +36,10 @@ const ForgotPasswordPage = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [otpShake, setOtpShake] = useState(false);
+
+    const otpLockSeconds = Math.ceil(otpLockTimeRemaining / 1000);
+    const remainingOtpAttempts = 3 - otpAttempts.count;
 
     const handleSendOtp = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -36,10 +51,17 @@ const ForgotPasswordPage = () => {
         if (error) {
             // Generic error message for security
             setError('Se a conta existir, um código será enviado. Verifique também a pasta de spam.');
-            // Even if it fails, we can move to OTP step to avoid enumeration, 
-            // but for real UX we usually show success message even if email doesn't exist.
             setStep('otp');
         } else {
+            // Enviar Email Customizado (Simulação de Template Rico)
+            await emailService.sendEmail({
+                recipient: email,
+                subject: 'Recuperação de Acesso 🔐',
+                template: 'password_reset',
+                payload: {
+                    reset_link: `https://angoplacemarket.ao/forgot-password?email=${email}`
+                }
+            });
             setStep('otp');
         }
 
@@ -48,20 +70,24 @@ const ForgotPasswordPage = () => {
 
     const handleVerifyOtp = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (otp.length !== 6) {
-            setError('Insira o código de 6 dígitos.');
+        if (otp.length !== 6 || isOtpLocked) {
+            if (otp.length !== 6) setError('Insira o código de 6 dígitos.');
             return;
         }
 
         setLoading(true);
         setError(null);
 
-        const { error } = await verifyOtp(email, otp);
+        const { error } = await verifyOtp(email, otp, 'email');
 
         if (error) {
-            setError('Código inválido ou expirado.');
+            setError(error.message);
+            setOtp('');
+            setOtpShake(true);
+            setTimeout(() => setOtpShake(false), 500);
         } else {
             setStep('newPassword');
+            resetOtpAttempts();
         }
 
         setLoading(false);
@@ -173,8 +199,43 @@ const ForgotPasswordPage = () => {
                             </Alert>
                         )}
 
-                        <div className="flex justify-center">
-                            <InputOTP maxLength={6} value={otp} onChange={setOtp}>
+                        {/* OTP Lock Alert */}
+                        {isOtpLocked && (
+                            <Alert className="border-orange-500/50 bg-orange-500/10">
+                                <div className="flex items-center gap-3">
+                                    <Timer className="h-5 w-5 text-orange-500" />
+                                    <div className="flex-1">
+                                        <p className="text-orange-600 font-medium text-sm">Verificação bloqueada</p>
+                                        <p className="text-orange-500/80 text-xs">
+                                            Aguarde <span className="font-mono font-bold">{otpLockSeconds}s</span>
+                                        </p>
+                                    </div>
+                                </div>
+                            </Alert>
+                        )}
+
+                        {/* OTP Attempts remaining */}
+                        {!isOtpLocked && otpAttempts.count > 0 && (
+                            <div className={cn(
+                                "flex items-center gap-2 text-xs p-2 rounded-lg",
+                                remainingOtpAttempts === 2 && "bg-yellow-500/10 text-yellow-600",
+                                remainingOtpAttempts === 1 && "bg-red-500/10 text-red-600"
+                            )}>
+                                <ShieldAlert className="h-4 w-4" />
+                                <span>
+                                    {remainingOtpAttempts === 1
+                                        ? 'Última tentativa!'
+                                        : `${remainingOtpAttempts} tentativas restantes`
+                                    }
+                                </span>
+                            </div>
+                        )}
+
+                        <div className={cn(
+                            "flex justify-center transition-transform",
+                            otpShake && "animate-[shake_0.5s_ease-in-out]"
+                        )}>
+                            <InputOTP maxLength={6} value={otp} onChange={setOtp} disabled={isOtpLocked}>
                                 <InputOTPGroup>
                                     <InputOTPSlot index={0} />
                                     <InputOTPSlot index={1} />
@@ -189,14 +250,14 @@ const ForgotPasswordPage = () => {
                         <Button
                             type="submit"
                             className="w-full bg-secondary hover:bg-secondary/90"
-                            disabled={loading || otp.length !== 6}
+                            disabled={loading || otp.length !== 6 || isOtpLocked}
                         >
                             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Verificar Código'}
                         </Button>
 
                         <button
                             type="button"
-                            onClick={() => setStep('email')}
+                            onClick={() => { setStep('email'); resetOtpAttempts(); }}
                             className="w-full text-sm text-muted-foreground hover:text-secondary"
                         >
                             Reenviar código
@@ -245,6 +306,7 @@ const ForgotPasswordPage = () => {
                                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                 </button>
                             </div>
+                            <PasswordStrengthIndicator password={newPassword} />
                         </div>
 
                         <div className="space-y-2">

@@ -1,4 +1,4 @@
-import { Star, Truck, Heart, ShoppingCart } from "lucide-react";
+import { Star, Truck, Heart, ShoppingCart, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -100,6 +100,14 @@ export const ProductCard = ({ product, variant = "default" }: ProductCardProps) 
             </span>
           )}
         </div>
+
+        {/* Location */}
+        {product.seller_province && (
+          <div className="flex items-center gap-1 text-muted-foreground text-xs mb-2">
+            <MapPin className="h-3 w-3" />
+            <span className="truncate">{product.seller_province}</span>
+          </div>
+        )}
 
         {/* Free shipping */}
         {product.freeShipping && (

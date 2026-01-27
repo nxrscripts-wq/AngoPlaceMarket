@@ -12,16 +12,40 @@ import {
     MessageSquare,
     CheckCircle2,
     Clock,
-    UserPlus
+    UserPlus,
+    AlertCircle,
+    Loader2
 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 export const CommunicationsTab = () => {
     const [template, setTemplate] = useState('welcome');
+    const [emailLogs, setEmailLogs] = React.useState<any[]>([]);
+    const [loading, setLoading] = React.useState(true);
+
+    React.useEffect(() => {
+        const fetchLogs = async () => {
+            const { data, error } = await supabase
+                .from('email_logs')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(10);
+
+            if (!error && data) {
+                setEmailLogs(data);
+            }
+            setLoading(false);
+        };
+
+        fetchLogs();
+    }, []);
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
+            {/* ... composer ... */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Notification Composer */}
                 <Card className="lg:col-span-2 bg-card/40 border-border">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -53,17 +77,16 @@ export const CommunicationsTab = () => {
                     </CardContent>
                 </Card>
 
-                {/* Templates & Stats */}
                 <div className="space-y-6">
                     <Card className="bg-card/40 border-border">
                         <CardHeader>
                             <CardTitle className="text-sm font-bold uppercase">Templates Recentes</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-3">
-                            {['Promoção de Fim de Semana', 'Aviso de Segurança', 'Novas Funcionalidades'].map((t) => (
+                            {['welcome', 'password_reset', 'order_confirmation', 'product_approved'].map((t) => (
                                 <Button key={t} variant="ghost" className="w-full justify-start text-xs h-auto py-2 px-3 border border-transparent hover:border-border">
                                     <MessageSquare className="mr-2 h-3 w-3 text-secondary" />
-                                    {t}
+                                    {t.replace('_', ' ').toUpperCase()}
                                 </Button>
                             ))}
                         </CardContent>
@@ -76,8 +99,8 @@ export const CommunicationsTab = () => {
                                     <Send className="h-6 w-6" />
                                 </div>
                                 <div>
-                                    <p className="text-2xl font-black">1.4k</p>
-                                    <p className="text-[10px] text-muted-foreground uppercase font-bold">Notificações este mês</p>
+                                    <p className="text-2xl font-black">{emailLogs.length}</p>
+                                    <p className="text-[10px] text-muted-foreground uppercase font-bold">Emails Enviados (Recentes)</p>
                                 </div>
                             </div>
                         </CardContent>
@@ -85,36 +108,47 @@ export const CommunicationsTab = () => {
                 </div>
             </div>
 
-            {/* Recent Communication Log */}
+            {/* Recent Email Log */}
             <Card className="bg-card/40 border-border">
                 <CardHeader>
-                    <CardTitle className="text-lg font-bold">Histórico de Mensagens Automáticas</CardTitle>
+                    <CardTitle className="text-lg font-bold">Histórico de Emails Transacionais</CardTitle>
+                    <CardDescription>Logs de envios automáticos do sistema</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-1">
-                        {[
-                            { target: 'Vendedor: João Silva', type: 'Aprovação de Produto', status: 'Enviado', time: '10 min atrás' },
-                            { target: 'Comprador: Maria Santos', type: 'Alerta de Login Suspeito', status: 'Lido', time: '45 min atrás' },
-                            { target: 'Todos os Utilizadores', type: 'Atualização de Termos', status: 'Enviado', time: '2 horas atrás' }
-                        ].map((log, i) => (
-                            <div key={i} className="flex items-center justify-between p-3 hover:bg-muted/20 transition-colors rounded-lg text-sm border-b last:border-0 border-border">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                                        <Clock className="h-4 w-4 text-muted-foreground" />
-                                    </div>
-                                    <div>
-                                        <p className="font-bold">{log.type}</p>
-                                        <p className="text-xs text-muted-foreground">{log.target}</p>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <Badge variant={log.status === 'Enviado' ? 'outline' : 'secondary'} className="text-[10px]">
-                                        {log.status}
-                                    </Badge>
-                                    <p className="text-[10px] text-muted-foreground mt-1">{log.time}</p>
-                                </div>
+                        {loading ? (
+                            <div className="flex justify-center py-8">
+                                <Loader2 className="h-6 w-6 animate-spin text-secondary" />
                             </div>
-                        ))}
+                        ) : emailLogs.length === 0 ? (
+                            <p className="text-center py-8 text-muted-foreground text-sm">Nenhum email enviado recentemente.</p>
+                        ) : (
+                            emailLogs.map((log) => (
+                                <div key={log.id} className="flex items-center justify-between p-3 hover:bg-muted/20 transition-colors rounded-lg text-sm border-b last:border-0 border-border">
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${log.status === 'sent' ? 'bg-green-500/10 text-green-500' :
+                                            log.status === 'failed' ? 'bg-red-500/10 text-red-500' : 'bg-muted text-muted-foreground'
+                                            }`}>
+                                            {log.status === 'sent' ? <CheckCircle2 className="h-4 w-4" /> :
+                                                log.status === 'failed' ? <AlertCircle className="h-4 w-4" /> :
+                                                    <Clock className="h-4 w-4" />}
+                                        </div>
+                                        <div>
+                                            <p className="font-bold truncate max-w-[200px]">{log.subject}</p>
+                                            <p className="text-[10px] text-muted-foreground">{log.recipient}</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <Badge variant={log.status === 'sent' ? 'outline' : log.status === 'failed' ? 'destructive' : 'secondary'} className="text-[10px] uppercase">
+                                            {log.status}
+                                        </Badge>
+                                        <p className="text-[10px] text-muted-foreground mt-1">
+                                            {formatDistanceToNow(new Date(log.created_at), { addSuffix: true, locale: ptBR })}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))
+                        )}
                     </div>
                 </CardContent>
             </Card>

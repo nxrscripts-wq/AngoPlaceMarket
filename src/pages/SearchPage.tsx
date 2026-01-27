@@ -1,125 +1,218 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useState, useEffect, useCallback, useMemo, memo } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { ProductCard } from '@/components/ProductCard';
-import { Loader2, Search as SearchIcon, XCircle, Zap, TrendingUp, Sparkles, Filter, ChevronRight } from 'lucide-react';
+import { SmartSearchInput } from '@/components/search/SmartSearchInput';
+import { useProductSearch, SearchFilters } from '@/hooks/useSearch';
+import {
+    Loader2,
+    Search as SearchIcon,
+    XCircle,
+    Zap,
+    TrendingUp,
+    Sparkles,
+    Filter,
+    MapPin,
+    SlidersHorizontal,
+    ChevronDown
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { MARKETPLACE_CATEGORIES } from '@/lib/categories';
-import { LoadingScreen } from '@/components/LoadingScreen';
 import { Product } from '@/types';
+import { cn } from '@/lib/utils';
 
+// Angola provinces
+const PROVINCES = [
+    'Bengo', 'Benguela', 'Bié', 'Cabinda', 'Cuando Cubango', 'Cuanza Norte',
+    'Cuanza Sul', 'Cunene', 'Huambo', 'Huíla', 'Icolo e Bengo', 'Luanda',
+    'Lunda Norte', 'Lunda Sul', 'Malanje', 'Moxico', 'Namibe', 'Uíge', 'Zaire'
+];
+
+const SORT_OPTIONS = [
+    { value: 'relevance', label: 'Mais relevantes' },
+    { value: 'newest', label: 'Mais recentes' },
+    { value: 'price_asc', label: 'Menor preço' },
+    { value: 'price_desc', label: 'Maior preço' },
+];
 
 const SearchPage = () => {
-    const [searchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const navigate = useNavigate();
     const query = searchParams.get('q') || '';
-    const filter = searchParams.get('filter') || '';
-    const [products, setProducts] = useState<Product[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+    const specialFilter = searchParams.get('filter') || '';
 
-    const handleSearch = useCallback(async () => {
-        setLoading(true);
-        try {
-            let supabaseQuery = supabase
-                .from('products')
-                .select('*')
-                .eq('status', 'PUBLICADO');
+    const { products, loading, totalCount, search } = useProductSearch();
 
-            if (query) {
-                supabaseQuery = supabaseQuery.ilike('name', `%${query}%`);
-            }
+    // Filters state
+    const [filters, setFilters] = useState<SearchFilters>({
+        category: searchParams.get('category') || null,
+        minPrice: searchParams.get('minPrice') ? Number(searchParams.get('minPrice')) : undefined,
+        maxPrice: searchParams.get('maxPrice') ? Number(searchParams.get('maxPrice')) : undefined,
+        province: searchParams.get('province') || undefined,
+        condition: (searchParams.get('condition') as 'new' | 'used' | 'all') || 'all',
+        sortBy: (searchParams.get('sortBy') as any) || 'relevance'
+    });
 
-            if (filter === 'flash') {
-                supabaseQuery = supabaseQuery.eq('is_flash_deal', true);
-            } else if (filter === 'new') {
-                supabaseQuery = supabaseQuery.order('created_at', { ascending: false });
-            }
+    // Count active filters
+    const activeFilterCount = useMemo(() => {
+        let count = 0;
+        if (filters.category) count++;
+        if (filters.minPrice || filters.maxPrice) count++;
+        if (filters.province) count++;
+        if (filters.condition && filters.condition !== 'all') count++;
+        return count;
+    }, [filters]);
 
-            if (selectedCategory) {
-                supabaseQuery = supabaseQuery.eq('category', selectedCategory);
-            }
-
-            supabaseQuery = supabaseQuery.order('created_at', { ascending: false });
-
-            const { data, error } = await supabaseQuery;
-
-            if (error) throw error;
-            setProducts((data || []) as Product[]);
-        } catch (error) {
-            console.error('Error searching products:', error);
-        } finally {
-            setLoading(false);
-        }
-    }, [query, filter]);
-
+    // Update search when query or filters change
     useEffect(() => {
-        handleSearch();
-    }, [handleSearch, selectedCategory]);
+        search(query, filters);
+    }, [query, filters, search]);
+
+    // Handle search from SmartSearchInput
+    const handleSearch = useCallback((newQuery: string) => {
+        setSearchParams(prev => {
+            prev.set('q', newQuery);
+            return prev;
+        });
+    }, [setSearchParams]);
+
+    // Apply filters
+    const applyFilters = useCallback((newFilters: Partial<SearchFilters>) => {
+        setFilters(prev => ({ ...prev, ...newFilters }));
+    }, []);
+
+    // Clear all filters
+    const clearFilters = useCallback(() => {
+        setFilters({
+            category: null,
+            minPrice: undefined,
+            maxPrice: undefined,
+            province: undefined,
+            condition: 'all',
+            sortBy: 'relevance'
+        });
+    }, []);
 
     const getTitle = () => {
-        if (query) return `Resultados para: "${query}"`;
-        if (filter === 'flash') return 'Ofertas do Dia';
-        if (filter === 'discounts') return 'Super Descontos';
-        if (filter === 'new') return 'Novidades';
+        if (query) return `Resultados para "${query}"`;
+        if (specialFilter === 'flash') return 'Ofertas do Dia';
+        if (specialFilter === 'discounts') return 'Super Descontos';
+        if (specialFilter === 'new') return 'Novidades';
         return 'Todos os Produtos';
     };
 
     const getIcon = () => {
-        if (filter === 'flash') return <Zap className="h-8 w-8 text-secondary fill-secondary animate-pulse" />;
-        if (filter === 'discounts') return <TrendingUp className="h-8 w-8 text-secondary" />;
-        if (filter === 'new') return <Sparkles className="h-8 w-8 text-secondary" />;
-        return <SearchIcon className="h-8 w-8 text-secondary" />;
+        if (specialFilter === 'flash') return <Zap className="h-6 w-6 text-secondary fill-secondary" />;
+        if (specialFilter === 'discounts') return <TrendingUp className="h-6 w-6 text-secondary" />;
+        if (specialFilter === 'new') return <Sparkles className="h-6 w-6 text-secondary" />;
+        return <SearchIcon className="h-6 w-6 text-secondary" />;
     };
 
     return (
-        <div className="min-h-screen bg-background text-card-foreground">
-            <main className="container mx-auto px-4 py-8">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="min-h-screen bg-background">
+            {/* Search Header - Sticky on Mobile */}
+            <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border py-3 md:py-4">
+                <div className="container mx-auto px-4">
+                    <SmartSearchInput
+                        onSearch={handleSearch}
+                        className="max-w-2xl mx-auto"
+                    />
+                </div>
+            </div>
+
+            <main className="container mx-auto px-4 py-6">
+                {/* Title and filters row */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                     <div>
-                        <h1 className="text-2xl md:text-3xl font-black mb-1 flex items-center gap-3">
+                        <h1 className="text-xl md:text-2xl font-bold flex items-center gap-2">
                             {getIcon()}
                             {getTitle()}
                         </h1>
-                        <p className="text-muted-foreground font-medium text-sm">
-                            {products.length} {products.length === 1 ? 'produto encontrado' : 'produtos encontrados'}
+                        <p className="text-sm text-muted-foreground mt-1">
+                            {totalCount} {totalCount === 1 ? 'produto encontrado' : 'produtos encontrados'}
                         </p>
                     </div>
 
-                    {/* Mobile Filters Trigger */}
-                    <div className="flex gap-2 items-center">
+                    <div className="flex items-center gap-2">
+                        {/* Sort dropdown - desktop */}
+                        <div className="hidden md:block">
+                            <Select
+                                value={filters.sortBy}
+                                onValueChange={(v) => applyFilters({ sortBy: v as any })}
+                            >
+                                <SelectTrigger className="w-44 h-10">
+                                    <SelectValue placeholder="Ordenar por" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {SORT_OPTIONS.map(opt => (
+                                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* Filter button */}
                         <Sheet>
                             <SheetTrigger asChild>
-                                <Button variant="outline" className="flex-1 md:flex-none gap-2 h-11 rounded-xl bg-card border-border">
-                                    <Filter className="h-4 w-4" />
-                                    Filtrar
-                                    {selectedCategory && (
-                                        <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">1</Badge>
+                                <Button variant="outline" className="gap-2 h-10 rounded-xl">
+                                    <SlidersHorizontal className="h-4 w-4" />
+                                    <span className="hidden sm:inline">Filtros</span>
+                                    {activeFilterCount > 0 && (
+                                        <Badge className="bg-secondary text-secondary-foreground h-5 w-5 p-0 flex items-center justify-center text-[10px]">
+                                            {activeFilterCount}
+                                        </Badge>
                                     )}
                                 </Button>
                             </SheetTrigger>
-                            <SheetContent side="bottom" className="rounded-t-[32px] h-[80vh] px-6">
+                            <SheetContent side="bottom" className="rounded-t-3xl h-[85vh] md:h-auto md:max-h-[80vh]">
                                 <SheetHeader className="mb-6">
-                                    <SheetTitle className="text-left text-2xl font-black">Filtros</SheetTitle>
+                                    <SheetTitle className="text-xl font-bold text-left">Filtros</SheetTitle>
                                 </SheetHeader>
-                                <div className="space-y-8 overflow-y-auto pb-10">
+
+                                <div className="space-y-6 overflow-y-auto pb-24 md:pb-6">
+                                    {/* Sort - Mobile only */}
+                                    <div className="md:hidden">
+                                        <Label className="text-sm font-semibold mb-3 block">Ordenar por</Label>
+                                        <Select
+                                            value={filters.sortBy}
+                                            onValueChange={(v) => applyFilters({ sortBy: v as any })}
+                                        >
+                                            <SelectTrigger className="w-full h-12">
+                                                <SelectValue placeholder="Ordenar por" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {SORT_OPTIONS.map(opt => (
+                                                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <Separator className="md:hidden" />
+
+                                    {/* Category */}
                                     <div>
-                                        <h3 className="text-sm font-black uppercase tracking-widest text-secondary mb-4">Escolha a Categoria</h3>
+                                        <Label className="text-sm font-semibold mb-3 block">Categoria</Label>
                                         <div className="grid grid-cols-2 gap-2">
                                             <Button
-                                                variant={selectedCategory === null ? "secondary" : "ghost"}
-                                                className="justify-start h-12 rounded-xl"
-                                                onClick={() => setSelectedCategory(null)}
+                                                variant={!filters.category ? "secondary" : "outline"}
+                                                className="h-11 justify-start rounded-xl"
+                                                onClick={() => applyFilters({ category: null })}
                                             >
                                                 Todas
                                             </Button>
                                             {MARKETPLACE_CATEGORIES.map(cat => (
                                                 <Button
                                                     key={cat.id}
-                                                    variant={selectedCategory === cat.id ? "secondary" : "ghost"}
-                                                    className="justify-start h-12 rounded-xl truncate"
-                                                    onClick={() => setSelectedCategory(cat.id)}
+                                                    variant={filters.category === cat.id ? "secondary" : "outline"}
+                                                    className="h-11 justify-start rounded-xl truncate"
+                                                    onClick={() => applyFilters({ category: cat.id })}
                                                 >
                                                     {cat.name}
                                                 </Button>
@@ -127,23 +220,112 @@ const SearchPage = () => {
                                         </div>
                                     </div>
 
-                                    <div className="pt-6 border-t border-border">
-                                        <Button
-                                            className="w-full h-14 bg-secondary text-secondary-foreground font-black text-lg rounded-2xl"
-                                            onClick={() => {
-                                                // Sheet closes automatically on outer click or we could use state
-                                                // but for now, the effect handles trigger
-                                            }}
+                                    <Separator />
+
+                                    {/* Price Range */}
+                                    <div>
+                                        <Label className="text-sm font-semibold mb-3 block">Faixa de Preço (Kz)</Label>
+                                        <div className="flex items-center gap-3">
+                                            <Input
+                                                type="number"
+                                                placeholder="Mínimo"
+                                                value={filters.minPrice || ''}
+                                                onChange={(e) => applyFilters({ minPrice: e.target.value ? Number(e.target.value) : undefined })}
+                                                className="h-12 rounded-xl"
+                                            />
+                                            <span className="text-muted-foreground">até</span>
+                                            <Input
+                                                type="number"
+                                                placeholder="Máximo"
+                                                value={filters.maxPrice || ''}
+                                                onChange={(e) => applyFilters({ maxPrice: e.target.value ? Number(e.target.value) : undefined })}
+                                                className="h-12 rounded-xl"
+                                            />
+                                        </div>
+                                        {/* Quick price buttons */}
+                                        <div className="flex gap-2 mt-3 overflow-x-auto pb-1">
+                                            {[
+                                                { label: 'Até 10k', max: 10000 },
+                                                { label: '10k - 50k', min: 10000, max: 50000 },
+                                                { label: '50k - 200k', min: 50000, max: 200000 },
+                                                { label: '200k+', min: 200000 },
+                                            ].map(range => (
+                                                <Button
+                                                    key={range.label}
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="shrink-0 rounded-full"
+                                                    onClick={() => applyFilters({ minPrice: range.min, maxPrice: range.max })}
+                                                >
+                                                    {range.label}
+                                                </Button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <Separator />
+
+                                    {/* Province */}
+                                    <div>
+                                        <Label className="text-sm font-semibold mb-3 block flex items-center gap-1.5">
+                                            <MapPin className="h-4 w-4" />
+                                            Localização
+                                        </Label>
+                                        <Select
+                                            value={filters.province || 'all'}
+                                            onValueChange={(v) => applyFilters({ province: v === 'all' ? undefined : v })}
                                         >
-                                            Aplicar Filtros
-                                        </Button>
+                                            <SelectTrigger className="w-full h-12 rounded-xl">
+                                                <SelectValue placeholder="Todas as províncias" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">Todas as províncias</SelectItem>
+                                                {PROVINCES.map(p => (
+                                                    <SelectItem key={p} value={p}>{p}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <Separator />
+
+                                    {/* Condition */}
+                                    <div>
+                                        <Label className="text-sm font-semibold mb-3 block">Condição</Label>
+                                        <div className="flex gap-2">
+                                            {[
+                                                { value: 'all', label: 'Todos' },
+                                                { value: 'new', label: 'Novo' },
+                                                { value: 'used', label: 'Usado' },
+                                            ].map(opt => (
+                                                <Button
+                                                    key={opt.value}
+                                                    variant={filters.condition === opt.value ? "secondary" : "outline"}
+                                                    className="flex-1 h-11 rounded-xl"
+                                                    onClick={() => applyFilters({ condition: opt.value as any })}
+                                                >
+                                                    {opt.label}
+                                                </Button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Fixed bottom actions */}
+                                <div className="absolute bottom-0 left-0 right-0 p-4 bg-background border-t border-border">
+                                    <div className="flex gap-3">
                                         <Button
-                                            variant="ghost"
-                                            className="w-full mt-2 h-12 text-muted-foreground font-bold"
-                                            onClick={() => setSelectedCategory(null)}
+                                            variant="outline"
+                                            className="flex-1 h-12 rounded-xl"
+                                            onClick={clearFilters}
                                         >
-                                            Limpar Tudo
+                                            Limpar
                                         </Button>
+                                        <SheetClose asChild>
+                                            <Button className="flex-1 h-12 rounded-xl bg-secondary text-secondary-foreground">
+                                                Ver {totalCount} resultados
+                                            </Button>
+                                        </SheetClose>
                                     </div>
                                 </div>
                             </SheetContent>
@@ -151,14 +333,60 @@ const SearchPage = () => {
                     </div>
                 </div>
 
+                {/* Active filters pills */}
+                {activeFilterCount > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-4">
+                        {filters.category && (
+                            <Badge variant="secondary" className="gap-1 px-3 py-1.5 rounded-full">
+                                {MARKETPLACE_CATEGORIES.find(c => c.id === filters.category)?.name}
+                                <button onClick={() => applyFilters({ category: null })}>
+                                    <XCircle className="h-3 w-3 ml-1" />
+                                </button>
+                            </Badge>
+                        )}
+                        {(filters.minPrice || filters.maxPrice) && (
+                            <Badge variant="secondary" className="gap-1 px-3 py-1.5 rounded-full">
+                                {filters.minPrice ? `${(filters.minPrice / 1000).toFixed(0)}k` : '0'} - {filters.maxPrice ? `${(filters.maxPrice / 1000).toFixed(0)}k` : '∞'} Kz
+                                <button onClick={() => applyFilters({ minPrice: undefined, maxPrice: undefined })}>
+                                    <XCircle className="h-3 w-3 ml-1" />
+                                </button>
+                            </Badge>
+                        )}
+                        {filters.province && (
+                            <Badge variant="secondary" className="gap-1 px-3 py-1.5 rounded-full">
+                                <MapPin className="h-3 w-3" />
+                                {filters.province}
+                                <button onClick={() => applyFilters({ province: undefined })}>
+                                    <XCircle className="h-3 w-3 ml-1" />
+                                </button>
+                            </Badge>
+                        )}
+                        {filters.condition && filters.condition !== 'all' && (
+                            <Badge variant="secondary" className="gap-1 px-3 py-1.5 rounded-full">
+                                {filters.condition === 'new' ? 'Novo' : 'Usado'}
+                                <button onClick={() => applyFilters({ condition: 'all' })}>
+                                    <XCircle className="h-3 w-3 ml-1" />
+                                </button>
+                            </Badge>
+                        )}
+                        <button
+                            onClick={clearFilters}
+                            className="text-xs text-secondary hover:underline px-2"
+                        >
+                            Limpar tudo
+                        </button>
+                    </div>
+                )}
+
+                {/* Results */}
                 {loading ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
                         {[...Array(10)].map((_, i) => (
                             <div key={i} className="aspect-[3/4] bg-muted animate-pulse rounded-xl" />
                         ))}
                     </div>
                 ) : products.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 text-card-foreground">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
                         {products.map((product: Product) => (
                             <ProductCard
                                 key={product.id}
@@ -171,25 +399,25 @@ const SearchPage = () => {
                                     sold: product.sales,
                                     freeShipping: product.is_international || product.sales > 1000,
                                 }}
-                                variant={filter === 'flash' ? 'flash' : 'default'}
+                                variant={specialFilter === 'flash' ? 'flash' : 'default'}
                             />
                         ))}
                     </div>
                 ) : (
-                    <div className="text-center py-20 bg-muted/20 rounded-3xl border border-dashed border-border max-w-2xl mx-auto">
-                        <XCircle className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
-                        <h3 className="text-2xl font-bold mb-2">Ops! Nada encontrado</h3>
-                        <p className="text-muted-foreground mb-8 px-8">
-                            Não encontramos nenhum produto que combine com os critérios selecionados.
-                            Tente pesquisar por termos mais genéricos ou verifique se escreveu corretamente.
+                    <div className="text-center py-16 bg-muted/20 rounded-2xl border border-dashed border-border max-w-xl mx-auto">
+                        <XCircle className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+                        <h3 className="text-xl font-bold mb-2">Nenhum resultado</h3>
+                        <p className="text-muted-foreground text-sm mb-6 px-6">
+                            Não encontramos produtos com esses critérios. Tente ajustar os filtros ou pesquisar outros termos.
                         </p>
-                        <Button
-                            variant="outline"
-                            className="bg-card border-border hover:bg-secondary hover:text-secondary-foreground text-sm h-11 px-6 rounded-xl"
-                            onClick={() => window.location.href = '/'}
-                        >
-                            Voltar para o Início
-                        </Button>
+                        <div className="flex gap-3 justify-center">
+                            <Button variant="outline" onClick={clearFilters}>
+                                Limpar filtros
+                            </Button>
+                            <Button onClick={() => navigate('/')}>
+                                Ver todos
+                            </Button>
+                        </div>
                     </div>
                 )}
             </main>

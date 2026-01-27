@@ -19,6 +19,7 @@ import {
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Order, OrderItem } from '@/types';
+import { ReviewForm } from '@/components/reviews/ReviewForm';
 
 
 const OrdersPage = () => {
@@ -31,7 +32,7 @@ const OrdersPage = () => {
         try {
             const { data, error } = await supabase
                 .from('orders')
-                .select('*, order_items(*)')
+                .select('*, order_items(*, products(seller_id))')
                 .eq('user_id', user?.id)
                 .order('created_at', { ascending: false });
 
@@ -133,7 +134,19 @@ const OrdersPage = () => {
                                                         <h4 className="font-bold line-clamp-1">{item.product_name || 'Produto sem nome'}</h4>
                                                         <p className="text-sm text-muted-foreground">Quantidade: {item.quantity}</p>
                                                     </div>
-                                                    <p className="font-bold">{Number(item.product_price || 0).toLocaleString('pt-AO')} Kz</p>
+                                                    <div className="flex flex-col items-end gap-2">
+                                                        <p className="font-bold">{Number(item.product_price || 0).toLocaleString('pt-AO')} Kz</p>
+                                                        {(order.status?.toLowerCase() === 'delivered' || order.status?.toLowerCase() === 'entregue') && item.products?.seller_id && (
+                                                            <div onClick={(e) => e.stopPropagation()}>
+                                                                <ReviewForm
+                                                                    orderItemId={item.id}
+                                                                    productId={item.product_id}
+                                                                    sellerId={item.products.seller_id}
+                                                                    trigger={<Button size="sm" variant="outline" className="h-8 text-xs">Avaliar</Button>}
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
