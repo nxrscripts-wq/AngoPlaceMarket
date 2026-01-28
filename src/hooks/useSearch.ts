@@ -24,7 +24,6 @@ const TYPO_CORRECTIONS: Record<string, string> = {
     'fridger': 'geladeira',
     'carro': 'carro',
     'veiculo': 'veículo',
-    'veiculo': 'veículo',
     'moradia': 'moradia',
     'apartmento': 'apartamento',
     'apratamento': 'apartamento',

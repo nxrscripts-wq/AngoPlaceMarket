@@ -15,6 +15,8 @@ import {
     Mail,
     MapPin,
     History,
+    CreditCard,
+    BarChart3,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -39,6 +41,8 @@ import { AntifraudTab } from './admin/tabs/AntifraudTab';
 import { CommunicationsTab } from './admin/tabs/CommunicationsTab';
 import { SettingsTab } from './admin/tabs/SettingsTab';
 import { ActionLogsTab } from './admin/tabs/ActionLogsTab';
+import { PaymentsTab } from './admin/tabs/PaymentsTab';
+import { AnalyticsTab } from './admin/tabs/AnalyticsTab';
 
 const AdminPage = () => {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -336,7 +340,7 @@ const AdminPage = () => {
 
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
                     <div className="pb-2 -mx-4 px-4 md:mx-0 md:px-0">
-                        <TabsList className="bg-muted/50 p-1 rounded-2xl h-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 w-full">
+                        <TabsList className="bg-muted/50 p-1 rounded-2xl h-auto grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-2 w-full">
                             <TabsTrigger value="dashboard" className="rounded-xl py-3 border border-transparent data-[state=active]:border-border data-[state=active]:bg-card text-xs md:text-sm">
                                 <LayoutDashboard className="h-4 w-4 mr-2" />
                                 Dash
@@ -364,6 +368,14 @@ const AdminPage = () => {
                             <TabsTrigger value="logs" className="rounded-xl py-3 border border-transparent data-[state=active]:border-border data-[state=active]:bg-card text-xs md:text-sm">
                                 <History className="h-4 w-4 mr-2" />
                                 Logs
+                            </TabsTrigger>
+                            <TabsTrigger value="payments" className="rounded-xl py-3 border border-transparent data-[state=active]:border-border data-[state=active]:bg-card text-xs md:text-sm">
+                                <CreditCard className="h-4 w-4 mr-2" />
+                                Pagtos
+                            </TabsTrigger>
+                            <TabsTrigger value="analytics" className="rounded-xl py-3 border border-transparent data-[state=active]:border-border data-[state=active]:bg-card text-xs md:text-sm">
+                                <BarChart3 className="h-4 w-4 mr-2" />
+                                Analytics
                             </TabsTrigger>
                         </TabsList>
                     </div>
@@ -420,6 +432,14 @@ const AdminPage = () => {
 
                             <TabsContent value="logs">
                                 <ActionLogsTab />
+                            </TabsContent>
+
+                            <TabsContent value="payments">
+                                <PaymentsTab />
+                            </TabsContent>
+
+                            <TabsContent value="analytics">
+                                <AnalyticsTab />
                             </TabsContent>
                         </div>
                     )}

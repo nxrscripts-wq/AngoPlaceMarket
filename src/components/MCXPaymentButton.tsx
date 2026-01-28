@@ -1,11 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/lib/supabase';
-import { Smartphone, Loader2, CheckCircle, CreditCard, Copy, ExternalLink } from 'lucide-react';
+import { Smartphone, Loader2, CheckCircle, Copy, XCircle, Clock, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
+import { usePaymentProtection } from '@/hooks/usePayment';
 
 interface MCXPaymentButtonProps {
     orderId: string;
@@ -13,11 +15,75 @@ interface MCXPaymentButtonProps {
     onSuccess: () => void;
 }
 
+type PaymentStep = 'IDLE' | 'PROCESSING' | 'WAITING' | 'CONFIRMED' | 'FAILED' | 'EXPIRED';
+
 export const MCXPaymentButton = ({ orderId, amount, onSuccess }: MCXPaymentButtonProps) => {
     const [loading, setLoading] = useState(false);
     const [phone, setPhone] = useState('');
-    const [step, setStep] = useState<'IDLE' | 'PROCESSING' | 'WAITING'>('IDLE');
+    const [step, setStep] = useState<PaymentStep>('IDLE');
     const [reference, setReference] = useState<string | null>(null);
+    const [paymentId, setPaymentId] = useState<string | null>(null);
+    const [expiresAt, setExpiresAt] = useState<Date | null>(null);
+    const [timeRemaining, setTimeRemaining] = useState<number>(0);
+
+    const { canPay, registerAttempt, updateStatus } = usePaymentProtection();
+
+    // Expiration timer
+    useEffect(() => {
+        if (!expiresAt || step !== 'WAITING') return;
+
+        const interval = setInterval(() => {
+            const remaining = Math.max(0, Math.floor((expiresAt.getTime() - Date.now()) / 1000));
+            setTimeRemaining(remaining);
+
+            if (remaining <= 0) {
+                setStep('EXPIRED');
+                updateStatus(orderId, 'failed');
+                toast.error('Tempo de pagamento expirado.');
+                clearInterval(interval);
+            }
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [expiresAt, step, orderId, updateStatus]);
+
+    // Realtime subscription for payment updates
+    useEffect(() => {
+        if (!paymentId || step !== 'WAITING') return;
+
+        const channel = supabase
+            .channel(`payment_${paymentId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'payments',
+                    filter: `id=eq.${paymentId}`,
+                },
+                (payload) => {
+                    const newStatus = payload.new.status;
+                    if (newStatus === 'CONFIRMADO') {
+                        setStep('CONFIRMED');
+                        updateStatus(orderId, 'completed');
+                        toast.success('Pagamento confirmado com sucesso!');
+                        setTimeout(onSuccess, 1500);
+                    } else if (newStatus === 'FALHADO') {
+                        setStep('FAILED');
+                        updateStatus(orderId, 'failed');
+                        toast.error('Pagamento falhou ou foi cancelado.');
+                    } else if (newStatus === 'EXPIRADO') {
+                        setStep('EXPIRED');
+                        updateStatus(orderId, 'failed');
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [paymentId, step, orderId, updateStatus, onSuccess]);
 
     const handleInitiate = async () => {
         if (!phone || phone.length < 9) {
@@ -25,55 +91,44 @@ export const MCXPaymentButton = ({ orderId, amount, onSuccess }: MCXPaymentButto
             return;
         }
 
+        // Check payment protection
+        const check = canPay(orderId);
+        if (!check.allowed) {
+            toast.error(check.reason || 'Pagamento não permitido');
+            return;
+        }
+
+        // Register attempt
+        if (!registerAttempt(orderId)) return;
+
         setLoading(true);
         setStep('PROCESSING');
 
         try {
-            const { data, error } = await supabase.functions.invoke('initiate-mcx-payment', {
-                body: { order_id: orderId, amount, phone },
+            const idempotencyKey = `${orderId}-${Date.now()}`;
+
+            const { data, error } = await supabase.functions.invoke('mcx-initiate', {
+                body: { order_id: orderId, amount, phone, idempotency_key: idempotencyKey },
             });
 
             if (error) throw error;
+            if (data.error) throw new Error(data.error);
 
             setReference(data.reference);
+            setPaymentId(data.payment_id);
+            setExpiresAt(new Date(Date.now() + (data.expires_in_seconds || 900) * 1000));
+            setTimeRemaining(data.expires_in_seconds || 900);
             setStep('WAITING');
-            toast.success('Pedido de pagamento enviado para o seu telemóvel!');
-
-            // Iniciar Realtime para escutar a confirmação
-            setupRealtime();
+            updateStatus(orderId, 'processing');
+            toast.success('Pedido de pagamento enviado!');
         } catch (error: any) {
             console.error('Payment error:', error);
             toast.error('Erro ao iniciar pagamento: ' + error.message);
+            updateStatus(orderId, 'failed');
             setStep('IDLE');
         } finally {
             setLoading(false);
         }
-    };
-
-    const setupRealtime = () => {
-        const channel = supabase
-            .channel('payment_updates')
-            .on(
-                'postgres_changes',
-                {
-                    event: 'UPDATE',
-                    schema: 'public',
-                    table: 'payments',
-                    filter: `order_id=eq.${orderId}`,
-                },
-                (payload) => {
-                    if (payload.new.status === 'CONFIRMADO') {
-                        toast.success('Pagamento confirmado com sucesso!');
-                        onSuccess();
-                    } else if (payload.new.status === 'FALHADO') {
-                        toast.error('Pagamento falhou ou foi cancelado.');
-                        setStep('IDLE');
-                    }
-                }
-            )
-            .subscribe();
-
-        return () => supabase.removeChannel(channel);
     };
 
     const copyReference = () => {
@@ -83,6 +138,70 @@ export const MCXPaymentButton = ({ orderId, amount, onSuccess }: MCXPaymentButto
         }
     };
 
+    const formatTime = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    // Success state
+    if (step === 'CONFIRMED') {
+        return (
+            <Card className="p-6 border-green-500/20 bg-green-500/5 animate-in zoom-in-95 duration-300">
+                <div className="flex flex-col items-center text-center space-y-4">
+                    <div className="h-16 w-16 bg-green-500/20 rounded-full flex items-center justify-center">
+                        <CheckCircle className="h-8 w-8 text-green-500" />
+                    </div>
+                    <div>
+                        <h4 className="font-bold text-lg text-green-600">Pagamento Confirmado!</h4>
+                        <p className="text-sm text-muted-foreground">Obrigado pela sua compra.</p>
+                    </div>
+                </div>
+            </Card>
+        );
+    }
+
+    // Failed state
+    if (step === 'FAILED') {
+        return (
+            <Card className="p-6 border-red-500/20 bg-red-500/5 animate-in zoom-in-95 duration-300">
+                <div className="flex flex-col items-center text-center space-y-4">
+                    <div className="h-16 w-16 bg-red-500/20 rounded-full flex items-center justify-center">
+                        <XCircle className="h-8 w-8 text-red-500" />
+                    </div>
+                    <div>
+                        <h4 className="font-bold text-lg text-red-600">Pagamento Falhou</h4>
+                        <p className="text-sm text-muted-foreground">Tente novamente ou use outro método.</p>
+                    </div>
+                    <Button variant="outline" onClick={() => setStep('IDLE')} className="border-red-500/50 text-red-600">
+                        Tentar Novamente
+                    </Button>
+                </div>
+            </Card>
+        );
+    }
+
+    // Expired state
+    if (step === 'EXPIRED') {
+        return (
+            <Card className="p-6 border-yellow-500/20 bg-yellow-500/5 animate-in zoom-in-95 duration-300">
+                <div className="flex flex-col items-center text-center space-y-4">
+                    <div className="h-16 w-16 bg-yellow-500/20 rounded-full flex items-center justify-center">
+                        <Clock className="h-8 w-8 text-yellow-600" />
+                    </div>
+                    <div>
+                        <h4 className="font-bold text-lg text-yellow-700">Tempo Expirado</h4>
+                        <p className="text-sm text-muted-foreground">O pagamento não foi confirmado a tempo.</p>
+                    </div>
+                    <Button variant="outline" onClick={() => setStep('IDLE')} className="border-yellow-500/50 text-yellow-700">
+                        Iniciar Novo Pagamento
+                    </Button>
+                </div>
+            </Card>
+        );
+    }
+
+    // Waiting state
     if (step === 'WAITING') {
         return (
             <Card className="p-6 border-secondary/20 bg-secondary/5 animate-in zoom-in-95 duration-300">
@@ -93,13 +212,20 @@ export const MCXPaymentButton = ({ orderId, amount, onSuccess }: MCXPaymentButto
                     <div>
                         <h4 className="font-bold text-lg">Aguardando Aprovação</h4>
                         <p className="text-sm text-muted-foreground">
-                            Por favor, verifique o seu aplicativo **Multicaixa Express** e confirme o pagamento.
+                            Confirme no seu app Multicaixa Express
                         </p>
                     </div>
 
-                    <div className="w-full p-4 bg-background border border-border rounded-xl flex justify-between items-center group">
+                    {/* Timer */}
+                    <Badge variant="outline" className={`text-sm font-mono ${timeRemaining < 60 ? 'border-red-500 text-red-500 animate-pulse' : ''}`}>
+                        <Clock className="h-3 w-3 mr-1" />
+                        Expira em {formatTime(timeRemaining)}
+                    </Badge>
+
+                    {/* Reference */}
+                    <div className="w-full p-4 bg-background border border-border rounded-xl flex justify-between items-center">
                         <div className="text-left">
-                            <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Referência MCX</p>
+                            <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Referência</p>
                             <p className="text-xl font-mono font-black text-secondary">{reference}</p>
                         </div>
                         <Button variant="ghost" size="icon" onClick={copyReference} className="hover:bg-secondary/10">
@@ -116,6 +242,7 @@ export const MCXPaymentButton = ({ orderId, amount, onSuccess }: MCXPaymentButto
         );
     }
 
+    // Idle state (default)
     return (
         <Card className="p-6 border-border shadow-md">
             <div className="space-y-4">
